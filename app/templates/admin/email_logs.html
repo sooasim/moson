@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+{% block content %}
+  <div class="card" style="margin-top:16px;margin-bottom:16px;">
+    <h2 style="margin:0 0 8px 0;">이메일 발송 로그</h2>
+    <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
+      최근 발송된 이메일의 성공/실패 여부와 제목, 수신자, 일부 내용을 확인할 수 있습니다.
+    </p>
+    <div class="scroll-panel">
+      <table>
+        <thead>
+          <tr>
+            <th>일시</th>
+            <th>성공 여부</th>
+            <th>DRYRUN</th>
+            <th>수신자</th>
+            <th>제목</th>
+            <th>본문 (앞부분)</th>
+            <th>오류 메시지</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="muted">{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>
+              {% if log.success %}
+                <span style="color:#4ade80;font-weight:800;">성공</span>
+              {% else %}
+                <span style="color:#f97373;font-weight:800;">실패</span>
+              {% endif %}
+            </td>
+            <td class="muted">{% if log.is_dryrun %}예{% else %}-{% endif %}</td>
+            <td class="muted">{{ log.to }}</td>
+            <td>{{ log.subject }}</td>
+            <td class="muted" style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {{ log.body.replace('\n',' ')[:200] }}
+            </td>
+            <td class="muted" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {{ log.error_message or '-' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}
+

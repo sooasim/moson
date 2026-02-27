@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>모손라이프 MOSON.life | 대한민국 1등 통신 혜택 비교 플랫폼</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+    
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        * { font-family: 'Pretendard', sans-serif; box-sizing: border-box; scroll-behavior: smooth; }
+        :root { --moson-mint: #66c691; --moson-dark: #020617; --moson-navy: #1e3a8a; }
+        body { background-color: #fcfdfe; color: var(--moson-dark); overflow-x: hidden; margin: 0; }
+
+        /* 배경 애니메이션 (전체 화면 상단 레이어) - 아주 은은하게만 보이도록 */
+        .fixed-anim-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 20;
+            overflow: hidden;
+        }
+        .wave {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 1px;
+            height: 1px;
+            border: 2px solid rgba(22, 163, 74, 0.14);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: wave-flash 10s infinite ease-out;
+            box-shadow: 0 0 18px rgba(22, 163, 74, 0.16), 0 0 28px rgba(34, 197, 94, 0.12);
+        }
+        @keyframes wave-flash {
+            0%   { width: 0; height: 0; opacity: 0.38; border-color: rgba(22, 163, 74, 0.24); }
+            50%  { opacity: 0.26; border-color: rgba(34, 197, 94, 0.2); }
+            100% { width: 260vh; height: 260vh; opacity: 0; border-color: rgba(34, 197, 94, 0.08); }
+        }
+        .lightning {
+            position: absolute;
+            width: 3px;
+            height: 380px;
+            background: linear-gradient(to bottom, transparent, rgba(22, 163, 74, 0.32), rgba(52, 211, 153, 0.26), rgba(22, 163, 74, 0.32), transparent);
+            opacity: 0.26;
+            animation: lightning-fall 5.2s infinite linear;
+            box-shadow: 0 0 10px rgba(22, 163, 74, 0.24), 0 0 18px rgba(34, 197, 94, 0.18);
+        }
+        @keyframes lightning-fall {
+            0%   { top: -60%; transform: translateX(0) skewX(-6deg); opacity: 0; }
+            12%  { opacity: 0.3; }
+            100% { top: 120%; transform: translateX(120px) skewX(-6deg); opacity: 0; }
+        }
+
+        /* 슬라이더 동그란 점 애니메이션 */
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 26px; width: 26px; border-radius: 50%; background: var(--moson-mint); cursor: pointer; box-shadow: 0 0 15px var(--moson-mint); animation: thumb-pulse 2s infinite; border: 3px solid #fff; }
+        @keyframes thumb-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+        /* 디자인 요소 강화 */
+        .neon-box { background: rgba(255, 255, 255, 0.9); border: 2px solid var(--moson-navy); border-radius: 24px; box-shadow: 6px 6px 0px var(--moson-mint); transition: all 0.3s ease; }
+        .neon-box:hover { transform: translate(-2px, -2px); box-shadow: 10px 10px 0px var(--moson-mint); }
+        .btn-mint { background: var(--moson-mint); color: #fff; font-weight: 800; border: 2px solid var(--moson-navy); box-shadow: 4px 4px 0px var(--moson-navy); transition: 0.2s; }
+        .btn-mint:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0px var(--moson-navy); }
+        .selected-btn { border: 3px solid var(--moson-mint) !important; background: #f0fdf4 !important; color: var(--moson-navy) !important; font-weight: 800; }
+
+        /* 업체 리스트 슬라이더 디자인 */
+        .partner-section { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-y: 4px solid var(--moson-mint); }
+        .partner-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; font-size: 10px; color: #e2e8f0; text-align: center; padding: 20px; }
+        @media (max-width: 768px) { .partner-grid { grid-template-columns: repeat(5, 1fr); } }
+        .partner-item { padding: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); border-radius: 6px; transition: 0.2s; }
+        .partner-item:hover { border-color: var(--moson-mint); color: var(--moson-mint); transform: scale(1.05); }
+
+        /* 후기 슬라이더 */
+        .review-card { height: 100%; display: flex; flex-direction: column; min-height: 320px; }
+        .swiper-button-next, .swiper-button-prev { color: var(--moson-mint) !important; }
+
+        /* 고정 상담 아이콘 (우측 하단 카톡/전화) */
+        .fixed-consult {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .icon-btn {
+            width: 62px;
+            height: 62px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.35);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            border: 2px solid transparent;
+            backdrop-filter: blur(8px);
+            animation: icon-pulse 1.8s infinite ease-in-out;
+        }
+        .icon-btn i {
+            text-shadow: 0 3px 8px rgba(15, 23, 42, 0.35);
+        }
+        .icon-btn.kakao {
+            background: radial-gradient(circle at 30% 30%, #ffe66d, #ffd53b 60%, #fbbf24 100%);
+            color: #201600;
+            border-color: transparent;
+        }
+        .icon-btn.phone {
+            background: linear-gradient(135deg, #22c55e, #16a34a, #0f766e);
+            color: #ecfdf5;
+            border-color: transparent;
+        }
+        .icon-btn:hover {
+            transform: translateY(-4px) scale(1.06);
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.45);
+        }
+
+        @keyframes icon-pulse {
+            0%, 100% {
+                transform: translateY(0) scale(1);
+                box-shadow: 0 14px 30px rgba(15, 23, 42, 0.35);
+            }
+            50% {
+                transform: translateY(-3px) scale(1.08);
+                box-shadow: 0 22px 48px rgba(15, 23, 42, 0.5);
+            }
+        }
+
+        /* 개통 사례 슬라이드 스타일 */
+        .top-case-swiper { background: #f8fafc; border-bottom: 1px solid #e2e8f0; height: 40px; }
+        .case-item { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #64748b; gap: 8px; }
+        .case-tag { background: var(--moson-mint); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; }
+
+        section { position: relative; z-index: 10; }
+        .check-card { cursor: pointer; border: 2px solid #e2e8f0; border-radius: 12px; padding: 10px; transition: 0.2s; text-align: center; font-size: 13px; font-weight: 700; background: #fff; }
+        .check-card input { display: none; }
+        .check-card:has(input:checked) { border-color: var(--moson-mint); background: #f0fdf4; color: var(--moson-navy); }
+        .ticker-wrap { background: var(--moson-dark); overflow: hidden; height: 36px; display: flex; align-items: center; z-index: 60; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .ticker-track { white-space: nowrap; animation: ticker-kf 30s linear infinite; color: var(--moson-mint); font-size: 13px; font-weight: 600; }
+        @keyframes ticker-kf { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+    </style>
+</head>
+<body>
+
+    <div class="fixed-anim-layer">
+        <div class="wave" style="animation-delay: 0s"></div>
+        <div class="wave" style="animation-delay: 4s"></div>
+        <div class="lightning" style="left: 15%; animation-duration: 5s;"></div>
+        <div class="lightning" style="left: 75%; animation-duration: 4s; animation-delay: 2s;"></div>
+    </div>
+
+    <div class="ticker-wrap sticky top-0 w-full">
+        <div class="ticker-track">💸 김**님: SKB 1G+TV 최대지원 확인 &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; ✅ 박**님: KT 500M 설치 완료 &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; 🔥 최**님: “모르면 손해” 보고 신청! &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; 📩 이**님: 카톡 상담 연결</div>
+    </div>
+
+    <header class="sticky top-[36px] w-full z-40 border-b border-gray-100 bg-white/80 backdrop-blur-md h-16 flex items-center">
+        <div class="container mx-auto px-6 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                {% if is_dealer_site %}
+                    <div class="text-2xl font-black tracking-tighter" style="color: var(--moson-navy);">[{{ tenant_company_name }}] MOSON</div>
+                {% else %}
+                    <div class="text-2xl font-black tracking-tighter" style="color: var(--moson-navy);">MOSON<span style="color: var(--moson-mint);">.life</span></div>
+                {% endif %}
+                <span class="hidden sm:block text-[10px] text-slate-500 font-bold border-l border-white/10 pl-3 ml-1">모르면 손해</span>
+            </div>
+            <nav class="hidden md:flex gap-8 text-sm font-bold text-slate-600">
+                <a href="#quote" class="hover:text-emerald-500 transition">혜택계산기</a>
+                <a href="#table" class="hover:text-emerald-500 transition">통신사비교표</a>
+                <a href="#reseller" class="hover:text-emerald-500 transition">부업안내</a>
+                <a href="#faq" class="hover:text-emerald-500 transition">자주묻는질문</a>
+            </nav>
+            <button onclick="scrollToForm()" class="btn-mint px-6 py-2 rounded-full text-xs shadow-lg uppercase tracking-widest">상담신청</button>
+        </div>
+    </header>
+
+    <section class="pt-32 pb-24 px-6">
+        <div class="container mx-auto grid lg:grid-cols-2 gap-16 items-center">
+            <div data-aos="fade-right">
+                <h1 class="text-5xl md:text-7xl font-black leading-tight mb-8 text-slate-900">
+                    모르면 <span style="color: var(--moson-mint);">손해!</span> 💸<br/>
+                    데이터 기반<br/>
+                    <span class="underline decoration-emerald-300 decoration-8 underline-offset-8">최적 혜택 매칭</span>
+                </h1>
+                <p class="text-xl text-slate-500 mb-10 leading-relaxed font-medium">
+                    단순 광고가 아닙니다. 실제 업무용 <strong>정책표 데이터를 기반</strong>으로<br/>
+                    고객님 상황에 가장 가까운 최대 현금지원 조합을 찾아드립니다.
+                </p>
+                <div class="flex flex-wrap gap-4">
+                    <button onclick="document.getElementById('quote').scrollIntoView()" class="btn-mint px-10 py-5 rounded-2xl text-xl shadow-2xl">⚡ 10초 견적 확인하기</button>
+                    <a href="tel:{{ tenant_phone }}" class="bg-slate-100 border-2 border-slate-200 text-slate-700 px-10 py-5 rounded-2xl font-black text-xl transition hover:bg-slate-200">📞 전화 상담 연결</a>
+                </div>
+            </div>
+            <div class="neon-box p-10 grid grid-cols-2 gap-6 bg-white" data-aos="fade-left">
+                <div class="text-center p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                    <p class="text-3xl font-black text-emerald-600">370+</p>
+                    <p class="text-xs font-bold text-slate-400 mt-2">제휴 대리점</p>
+                </div>
+                <div class="text-center p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                    <p class="text-3xl font-black text-slate-800">12,847</p>
+                    <p class="text-xs font-bold text-slate-400 mt-2">누적 고객</p>
+                </div>
+                <div class="text-center p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                    <p class="text-3xl font-black text-slate-800">42만원</p>
+                    <p class="text-xs font-bold text-slate-400 mt-2">평균 지원금</p>
+                </div>
+                <div class="text-center p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                    <p class="text-3xl font-black text-emerald-600">4.8/5.0</p>
+                    <p class="text-xs font-bold text-slate-400 mt-2">고객 만족도</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="bidModal" class="fixed inset-0 bg-slate-900/70 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full mx-4 p-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-black text-slate-900">실시간 견적 입찰 결과</h3>
+                <button type="button" onclick="closeBidModal()" class="text-slate-400 hover:text-slate-700 text-xl font-black">&times;</button>
+            </div>
+            <p class="text-sm text-slate-500 mb-4">
+                통신사 정책표 기준 현금지원 정책 범위 내에서 제휴 대리점 10곳이 제시한 견적입니다. 실제 조건은 상담 시 확정됩니다.
+            </p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50">
+                            <th class="p-2 text-left">업체명</th>
+                            <th class="p-2 text-right">예상 현금지원(원)</th>
+                            <th class="p-2 text-center">신청</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bidModalBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="bidLoading" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-40 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl px-10 py-8 text-center max-w-sm mx-4">
+            <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto mb-6 animate-spin"></div>
+            <p class="text-lg font-black text-slate-900 mb-2">실시간 견적 받는 중...</p>
+            <p class="text-xs text-slate-500 font-medium">제휴 대리점들의 제안을 모으고 있습니다. 3~5초 정도 소요됩니다.</p>
+        </div>
+    </div>
+
+    <section class="py-24 bg-white/50 border-y-2 border-slate-100">
+        <div class="container mx-auto px-6">
+            <h2 class="text-4xl font-black text-center mb-16 italic">왜 같은 상품인데 혜택이 다를까요?</h2>
+            <div class="grid md:grid-cols-2 gap-10 max-w-5xl mx-auto mb-16">
+                <div class="neon-box p-10 border-red-500 bg-red-50/10 text-center shadow-[6px_6px_0px_#ef4444]">
+                    <div class="text-5xl mb-6">❌</div>
+                    <h3 class="text-2xl font-black mb-6 text-red-600 uppercase">기존 방식</h3>
+                    <p class="text-slate-500 mb-2 font-bold">통신사 직접 가입 ↓</p>
+                    <p class="text-slate-500 mb-2 font-bold">숨겨진 대리점 수수료 ↓</p>
+                    <p class="text-slate-500 mb-8 font-bold">고객은 모르고 손해</p>
+                    <p class="text-4xl font-black text-red-600 underline">💸 평균 10만원 혜택</p>
+                </div>
+                <div class="neon-box p-10 border-emerald-500 bg-emerald-50/10 text-center shadow-[6px_6px_0px_#10b981]">
+                    <div class="text-5xl mb-6">✅</div>
+                    <h3 class="text-2xl font-black mb-6 text-emerald-600 uppercase">모손라이프 방식</h3>
+                    <p class="text-emerald-700 mb-2 font-black">모손라이프 신청 ↓</p>
+                    <p class="text-emerald-700 mb-2 font-black">370개 업체 공개 경쟁 ↓</p>
+                    <p class="text-emerald-700 mb-8 font-black">최대 혜택 투명 공개</p>
+                    <p class="text-4xl font-black text-emerald-600 underline">💰 평균 42만원 혜택</p>
+                </div>
+            </div>
+
+            <div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-8 text-sm">
+                <div class="bg-white p-6 rounded-2xl border-2 border-slate-100 shadow-sm">
+                    <h4 class="font-black text-emerald-600 mb-3 text-lg">01. 실제 대리점 기준표 기반</h4>
+                    <p class="text-slate-500 leading-relaxed font-medium">통신사에서 대리점에 지급하는 수수료(원가표)를 기준으로 고객 현금지원 + 리셀러 수익 + 모손 수수료를 투명하게 설계합니다.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border-2 border-slate-100 shadow-sm">
+                    <h4 class="font-black text-emerald-600 mb-3 text-lg">02. 한 번의 문의로 3사 비교</h4>
+                    <p class="text-slate-500 leading-relaxed font-medium">“어디가 제일 많이 주나요?” 한 통의 전화/카톡으로 SKT · KT · LG U+ 조건을 한 번에 비교해 드립니다.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border-2 border-slate-100 shadow-sm">
+                    <h4 class="font-black text-emerald-600 mb-3 text-lg">03. 리셀러 프로그램 운영</h4>
+                    <p class="text-slate-500 leading-relaxed font-medium">본인을 비롯하여 지인·고객을 소개하면 개통 건당 리워드를 지급합니다.(*본인 포함) 꾸준히 하시면 월 수십만 원의 부업도 가능합니다.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="quote" class="py-24 px-6 bg-slate-50">
+        <div class="container mx-auto max-w-5xl">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-black mb-4 italic text-slate-900">내 예상 현금지원액 확인</h2>
+                <p class="text-slate-500 font-bold uppercase tracking-widest text-xs">Real-time quote engine based on policy data</p>
+            </div>
+            <div class="neon-box grid lg:grid-cols-5 overflow-hidden bg-white">
+                <div class="lg:col-span-2 bg-emerald-50/70 p-12 flex flex-col justify-center items-center text-center border-r-2 border-slate-200">
+                    <p class="text-[11px] font-black text-emerald-600 uppercase mb-8 tracking-[0.2em]">Estimated Result</p>
+                    <div class="mb-6">
+                        <span class="text-sm font-bold text-slate-400 block mb-2 uppercase">예상 현금지원액</span>
+                        <h4 id="o_cash" class="text-6xl font-black text-slate-900 tracking-tighter">-</h4>
+                        <p id="o_cash_note" class="text-xs font-bold text-orange-600 mt-2 hidden">+ 상품권 포함 (KT)</p>
+                    </div>
+                    <p id="o_reseller_note" class="text-sm font-bold text-slate-500 mb-6">위 금액에 <span class="text-orange-500">리셀러 지원금</span>이 더해집니다.</p>
+                    <div class="mb-10">
+                        <span class="text-sm font-bold text-slate-400 block mb-2 uppercase">Monthly Fee</span>
+                        <h4 id="o_monthly" class="text-2xl font-black text-emerald-600 italic">월 -</h4>
+                    </div>
+                    <button onclick="scrollToForm()" class="btn-mint w-full py-6 rounded-2xl text-xl font-black italic uppercase">상세 견적 신청</button>
+                </div>
+                <div class="lg:col-span-3 p-12 space-y-12">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-6 uppercase tracking-widest">01. 통신사 선택</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <button onclick="calcState('telco','LG',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition selected-btn shadow-sm">LG U+</button>
+                            <button onclick="calcState('telco','SKT',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition hover:border-emerald-400">SKT/SKB</button>
+                            <button onclick="calcState('telco','KT',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition hover:border-emerald-400">KT Olleh</button>
+                            <button onclick="calcState('telco','ANY',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition hover:border-emerald-400 italic">상관없음</button>
+                        </div>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">02. 상품 구성</label>
+                            <select id="f_group" class="w-full p-5 rounded-xl border-2 border-slate-100 bg-white font-black outline-none focus:border-emerald-400" onchange="onGroupChange()">
+                                <option value="">통신사와 연동 중…</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">03. 상품/속도 선택</label>
+                            <select id="f_product" class="w-full p-5 rounded-xl border-2 border-slate-100 bg-white font-black outline-none focus:border-emerald-400" onchange="updateQuote()">
+                                <option value="">상품 구성부터 선택해주세요</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="form" class="py-32 px-6">
+        <div class="container mx-auto max-w-3xl">
+            <div class="neon-box p-12 md:p-16 border-emerald-500 bg-white">
+                <div class="text-center mb-12">
+                    <h2 class="text-4xl font-black mb-4 italic text-slate-900 uppercase">300개 업체 5분 견적 받기</h2>
+                    <p class="text-slate-500 font-black uppercase tracking-widest text-xs">최적의 현금지원 조합을 실시간으로 매칭해드립니다</p>
+                </div>
+                <form id="consultForm" class="space-y-8" method="post" action="/consult">
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 mb-3 uppercase">1. 현금지원액 계산기에서 선택한 조건</label>
+                        <div class="bg-slate-50 border border-slate-200 rounded-3xl p-4 text-left text-sm">
+                            <p id="quoteSummaryLine1" class="font-bold text-slate-700 mb-1">
+                                아직 조건을 선택하지 않으셨습니다. 위에서 현금지원액을 먼저 확인해 주세요.
+                            </p>
+                            <p id="quoteSummaryLine2" class="text-xs text-slate-500">
+                            </p>
+                        </div>
+                        <input type="hidden" name="quote_row_id" id="quote_row_id">
+                        <input type="hidden" name="quote_telco" id="quote_telco">
+                        <input type="hidden" name="quote_kind" id="quote_kind">
+                        <input type="hidden" name="quote_product_name" id="quote_product_name">
+                        <input type="hidden" name="quote_month_fee" id="quote_month_fee">
+                        <input type="hidden" name="quote_cash_support" id="quote_cash_support">
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6 border-t pt-8">
+                        <input type="text" id="f_name" name="customer_name" placeholder="성함" class="w-full p-5 rounded-3xl border-2 border-slate-100 font-black outline-none focus:border-emerald-400 transition" required>
+                        <input type="tel" id="f_phone" name="customer_phone" placeholder="연락처 (010-1234-5678)" class="w-full p-5 rounded-3xl border-2 border-slate-100 font-black outline-none focus:border-emerald-400 transition" required>
+                    </div>
+                    <button type="button" onclick="startBid()" class="btn-mint w-full py-7 rounded-[40px] text-2xl font-black italic shadow-2xl uppercase tracking-tighter">🚀 실시간 견적 입찰 시작</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section id="table" class="py-24 bg-white">
+        <div class="container mx-auto px-6">
+            <h2 class="text-4xl font-black text-center mb-6">통신 3사 요금 &amp; 현금지원 기준표 (요약)</h2>
+            <p class="text-center text-sm text-slate-500 mb-10 max-w-3xl mx-auto">
+                아래 내용은 모손라이프가 보유한 실제 업무용 요금/지원금 엑셀을 요약한 표입니다.<br/>
+                정확한 금액은 시기·프로모션·지역에 따라 상이할 수 있습니다.
+            </p>
+            <div class="overflow-x-auto rounded-3xl border-2 border-slate-100 shadow-xl max-w-6xl mx-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 text-slate-500 font-black border-b uppercase">
+                        <tr>
+                            <th class="p-4 text-center">통신사</th>
+                            <th class="p-4 text-center">상품구분</th>
+                            <th class="p-4 text-center">상품명/채널수</th>
+                            <th class="p-4 text-center">속도</th>
+                            <th class="p-4 text-center">약정</th>
+                            <th class="p-4 text-center">결합</th>
+                            <th class="p-4 text-right">월요금(원)</th>
+                            <th class="p-4 text-right text-emerald-600">현금지원(원)</th>
+                            <th class="p-4 text-center text-orange-500">리셀러 지원금(원)</th>
+                            <th class="p-4 text-center">비고</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center divide-y divide-slate-50 font-bold text-slate-600">
+                        <tr class="hover:bg-emerald-50/50 transition">
+                            <td class="p-4">LG U+</td>
+                            <td class="p-4">인터넷 + TV</td>
+                            <td class="p-4">실속형 217채널</td>
+                            <td class="p-4">100M</td>
+                            <td class="p-4">3년</td>
+                            <td class="p-4">결합</td>
+                            <td class="p-4 text-right">34,100</td>
+                            <td class="p-4 text-right text-emerald-600">400,000</td>
+                            <td class="p-4 text-center text-orange-500">3~15만원 사이</td>
+                            <td class="p-4 text-emerald-600">대표 추천</td>
+                        </tr>
+                        <tr class="hover:bg-emerald-50/50 transition">
+                            <td class="p-4">LG U+</td>
+                            <td class="p-4">인터넷 단독</td>
+                            <td class="p-4">-</td>
+                            <td class="p-4">100M</td>
+                            <td class="p-4">3년</td>
+                            <td class="p-4">결합</td>
+                            <td class="p-4 text-right">16,500</td>
+                            <td class="p-4 text-right text-emerald-600">200,000</td>
+                            <td class="p-4 text-center text-orange-500">3~15만원 사이</td>
+                            <td class="p-4">1~2인 가구 저렴형</td>
+                        </tr>
+                        <tr class="hover:bg-emerald-50/50 transition">
+                            <td class="p-4">KT</td>
+                            <td class="p-4">인터넷 + TV</td>
+                            <td class="p-4">베이직 239채널</td>
+                            <td class="p-4">500M</td>
+                            <td class="p-4">3년</td>
+                            <td class="p-4">결합</td>
+                            <td class="p-4 text-right">37,400</td>
+                            <td class="p-4 text-right text-emerald-600">450,000</td>
+                            <td class="p-4 text-center text-orange-500">3~15만원 사이</td>
+                            <td class="p-4">게임/스트리밍 다용도</td>
+                        </tr>
+                        <tr class="hover:bg-emerald-50/50 transition">
+                            <td class="p-4">SK 브로드밴드</td>
+                            <td class="p-4">인터넷 + TV</td>
+                            <td class="p-4">이코노미 183채널</td>
+                            <td class="p-4">500M</td>
+                            <td class="p-4">3년</td>
+                            <td class="p-4">결합</td>
+                            <td class="p-4 text-right">35,200</td>
+                            <td class="p-4 text-right text-emerald-600">480,000</td>
+                            <td class="p-4 text-center text-orange-500">3~15만원 사이</td>
+                            <td class="p-4">가성비 인기 상품</td>
+                        </tr>
+                        <tr class="hover:bg-emerald-50/50 transition">
+                            <td class="p-4">SKT</td>
+                            <td class="p-4">인터넷 단독</td>
+                            <td class="p-4">-</td>
+                            <td class="p-4">100M</td>
+                            <td class="p-4">3년</td>
+                            <td class="p-4">결합</td>
+                            <td class="p-4 text-right">17,600</td>
+                            <td class="p-4 text-right text-emerald-600">110,000</td>
+                            <td class="p-4 text-center text-orange-500">3~15만원 사이</td>
+                            <td class="p-4">휴대폰 결합 시 요금 인하</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-24 bg-white">
+        <div class="container mx-auto px-6">
+            <h2 class="text-4xl font-black text-center mb-16">왜 12,847명이 모손을 선택했을까요?</h2>
+            <div class="grid md:grid-cols-4 gap-8">
+                <div class="neon-box p-10 text-center bg-white">
+                    <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-8 font-black text-xl border-2 border-emerald-600 shadow-[4px_4px_0px_#020617]">1</div>
+                    <h3 class="text-lg font-black mb-4">원가 기반 투명 설계</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed font-medium">대리점 수수료 원가를 기준으로 고객 지원금을 투명하게 설계하여 최대로 돌려드립니다.</p>
+                </div>
+                <div class="neon-box p-10 text-center bg-white">
+                    <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-8 font-black text-xl border-2 border-emerald-600 shadow-[4px_4px_0px_#020617]">2</div>
+                    <h3 class="text-lg font-black mb-4">당일 입금 원칙</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed font-medium">설치 확인 즉시, 약속된 금액을 당일 또는 익일 계좌로 바로 입금해 드립니다.</p>
+                </div>
+                <div class="neon-box p-10 text-center bg-white">
+                    <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-8 font-black text-xl border-2 border-emerald-600 shadow-[4px_4px_0px_#020617]">3</div>
+                    <h3 class="text-lg font-black mb-4">100% 동일 품질</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed font-medium">통신사 공식 설치팀이 방문합니다. 본사 직영과 동일한 품질 및 A/S를 보장합니다.</p>
+                </div>
+                <div class="neon-box p-10 text-center bg-white">
+                    <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-8 font-black text-xl border-2 border-emerald-600 shadow-[4px_4px_0px_#020617]">4</div>
+                    <h3 class="text-lg font-black mb-4">365일 실시간 상담</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed font-medium">주말이나 공휴일에도 전문 상담사가 상주하여 고객님의 궁금증을 해결해 드립니다.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="reseller" class="py-24 bg-emerald-600 text-white relative border-y-4 border-slate-900">
+        <div class="container mx-auto grid lg:grid-cols-2 gap-20 items-center px-6 relative z-10">
+            <div data-aos="fade-up">
+                <h2 class="text-5xl md:text-7xl font-black mb-10 leading-tight italic">월 50만원,<br/>스마트 부업의 시작</h2>
+                <p class="text-2xl font-bold mb-12" style="color: var(--moson-dark);">친구에게 '모손' 알려주고 추가 수익 받기</p>
+                <div class="space-y-4 text-lg font-black mb-12">
+                    <p class="flex items-center gap-3 bg-white/10 p-4 rounded-xl border border-white/20"><i class="fas fa-check-circle text-emerald-300"></i> 상담/설치는 모손이 전담 (홍보만 하세요)</p>
+                    <p class="flex items-center gap-3 bg-white/10 p-4 rounded-xl border border-white/20"><i class="fas fa-check-circle text-emerald-300"></i> 블로그, 인스타, 카페 등에 홍보 가능</p>
+                    <p class="flex items-center gap-3 bg-white/10 p-4 rounded-xl border border-white/20"><i class="fas fa-check-circle text-emerald-300"></i> 친구·지인 소개 시, 개통 건당 리워드 지급</p>
+                    <p class="flex items-center gap-3 bg-white/10 p-4 rounded-xl border border-white/20"><i class="fas fa-check-circle text-emerald-300"></i> 무자본 · 무재고 · 재택으로 부업 가능</p>
+                </div>
+                <div class="mt-6 top-case-swiper overflow-hidden rounded-2xl shadow-xl border border-emerald-300/40">
+                    <div class="swiper caseSwiper h-full">
+                        <div class="swiper-wrapper">
+                            <div class="swiper-slide case-item">
+                                <span class="case-tag">지급완료</span>
+                                김*수님 LG 500M + TV 가입완료 (지원금 47만원 + 리셀러 지원금)
+                            </div>
+                            <div class="swiper-slide case-item">
+                                <span class="case-tag">지급완료</span>
+                                박*민님 SKB 1G + TV 가입완료 (지원금 48만원 + 리셀러 지원금)
+                            </div>
+                            <div class="swiper-slide case-item">
+                                <span class="case-tag">지급완료</span>
+                                이*현님 KT 500M 가입완료 (지원금 31만원 + 리셀러 지원금)
+                            </div>
+                            <div class="swiper-slide case-item">
+                                <span class="case-tag">지급완료</span>
+                                최*윤님 LG 1G + TV 가입완료 (지원금 47만원 + 리셀러 지원금)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="neon-box p-12 bg-white text-slate-900" data-aos="fade-left">
+                <h3 class="text-2xl font-black text-center mb-10 tracking-widest uppercase italic border-b-4 border-slate-50 pb-6">Revenue Simulator</h3>
+                <div class="space-y-12">
+                    <div>
+                        <div class="flex justify-between font-black mb-6">
+                            <span class="text-slate-400 uppercase tracking-widest">Target Referrals</span>
+                            <span style="color: var(--moson-mint); font-size: 28px;"><span id="refCount">10</span>건</span>
+                        </div>
+                        <p class="text-[11px] text-emerald-600 font-black mb-4 animate-bounce">👈 바의 동그란 점을 밀어서 수익을 확인하세요!</p>
+                        <input type="range" id="refSlider" min="0" max="30" value="10" class="w-full h-4 bg-slate-100 rounded-full appearance-none cursor-pointer accent-[#66c691]" oninput="updateReward()">
+                    </div>
+                    <div class="bg-emerald-50 p-12 rounded-[50px] text-center border-4 border-emerald-100 shadow-inner">
+                        <p class="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest">Expected Monthly Profit</p>
+                        <div id="rewardOut" class="text-6xl font-black text-emerald-600 tracking-tighter">1,000,000원</div>
+                    </div>
+                    <a href="{{ url_for('routes.partner_apply') }}" class="btn-mint w-full py-6 rounded-[30px] text-2xl uppercase italic tracking-tighter shadow-2xl text-center flex items-center justify-center">부업 파트너 신청 🚀</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="reviews" class="py-24 bg-slate-50 px-6">
+        <div class="container mx-auto max-w-6xl relative">
+            <div class="text-center mb-20" data-aos="fade-up">
+                <h2 class="text-4xl font-black mb-4 uppercase italic">Real Voices</h2>
+                <p class="text-emerald-600 font-black text-2xl tracking-[0.2em]">100% 실제 후기 살펴 볼까요? (평점 4.8 / 5.0)</p>
+            </div>
+            <div class="swiper reviewSwiper pb-12">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide h-auto">
+                        <div class="neon-box p-10 review-card bg-white">
+                            <p class="text-xs font-black text-slate-400 mb-6 border-b pb-4">통신사 변경 | 서울 성동구 | ⭐⭐⭐⭐⭐</p>
+                            <p class="text-slate-700 font-medium italic mb-10 leading-relaxed flex-grow">"설치 상담사님이 설명도 확실하고 빠르게 잘 해주시고, 일정까지 완벽하게 잡아주셨어요. 인터넷 설치 완료했습니다! 다른 서비스가 필요할 때 또 이용하고 싶어요😀"</p>
+                            <div class="bg-emerald-50 p-5 rounded-2xl text-xs font-black text-emerald-700 shadow-sm border border-emerald-100 text-center">KT 5년 사용 → SKT 500M+TV 변경</div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide h-auto">
+                        <div class="neon-box p-10 review-card bg-white">
+                            <p class="text-xs font-black text-slate-400 mb-6 border-b pb-4">신규 가입 | 서울 관악구 | ⭐⭐⭐⭐⭐</p>
+                            <p class="text-slate-700 font-medium italic mb-10 leading-relaxed flex-grow">"직원분들이 너무 친절해요. 인터넷 문의할 때 귀찮게 이것저것 물어봤는데 하나하나 상세히 차근차근 설명해주셔서 너무 기분 좋았습니다. 모손이 최고네요!"</p>
+                            <div class="bg-emerald-50 p-5 rounded-2xl text-xs font-black text-emerald-700 shadow-sm border border-emerald-100 text-center">LG 100M 신규 가입</div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide h-auto">
+                        <div class="neon-box p-10 review-card bg-white">
+                            <p class="text-xs font-black text-slate-400 mb-6 border-b pb-4">요금제 변경 | 부산 해운대구 | ⭐⭐⭐⭐⭐</p>
+                            <p class="text-slate-700 font-medium italic mb-10 leading-relaxed flex-grow">"친절히 응대해 주셔서 안 할 수 없었어요. 우리 집에 알맞은 요금제 찾아주시고 가족들 약정 끝나는 것도 체크해주셔서 너무 만족합니다."</p>
+                            <div class="bg-emerald-50 p-5 rounded-2xl text-xs font-black text-emerald-700 shadow-sm border border-emerald-100 text-center">KT 500M 사용 → LG 인터넷 100M</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="swiper-button-next"></div>
+                <div class="swiper-button-prev"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq" class="py-32 px-6 bg-white">
+        <div class="container mx-auto max-w-4xl">
+            <h2 class="text-4xl font-black text-center mb-16 italic tracking-tight uppercase border-b-8 border-emerald-100 inline-block left-1/2 -translate-x-1/2 relative">자주 묻는 질문</h2>
+            <div class="space-y-4 mb-24">
+                <details class="neon-box p-8 cursor-pointer group shadow-none hover:shadow-xl" open><summary class="font-black text-lg list-none flex justify-between uppercase">Q. 통신사 직접 가입보다 손해보는 건 없나요? <i class="fas fa-plus transition group-open:rotate-45"></i></summary><p class="mt-6 text-slate-500 font-medium leading-relaxed">월 기본요금과 약정 조건은 통신사 직영/대리점/온라인이 거의 동일합니다. 대신, 모손라이프는 대리점 수수료 중 일부를 고객 현금지원과 리셀러 리워드로 돌려드리는 구조이기 때문에, 고객 입장에서는 혜택이 더 늘어나는 구조입니다.</p></details>
+                <details class="neon-box p-8 cursor-pointer group shadow-none hover:shadow-xl"><summary class="font-black text-lg list-none flex justify-between uppercase">Q. 리셀러(부업)는 어떻게 시작하나요? <i class="fas fa-plus transition group-open:rotate-45"></i></summary><p class="mt-6 text-slate-500 font-medium leading-relaxed">전화나 카카오톡으로 리셀러 등록 의사를 전달해 주시면, 간단한 등록 절차 후 전용 안내 페이지(요금표/홍보자료/정산방식)를 공유해 드립니다. 그 이후에는 지인을 소개하시거나, 온라인에 안내 글을 올려 주시면 됩니다.</p></details>
+                <details class="neon-box p-8 cursor-pointer group shadow-none hover:shadow-xl"><summary class="font-black text-lg list-none flex justify-between uppercase">Q. 현금/사은품은 언제 지급되나요? <i class="fas fa-plus transition group-open:rotate-45"></i></summary><p class="mt-6 text-slate-500 font-medium leading-relaxed">설치 당일 오후 3시 이전 완료 시 당일 입금, 이후 완료 시 익일 입금됩니다. 먹튀, 지연 걱정 없이 안심하고 이용하세요.</p></details>
+            </div>
+            
+            <div class="neon-box p-12 bg-slate-900 text-white border-none">
+                <h3 class="text-3xl font-black mb-10 italic">왜 모손라이프인가요?</h3>
+                <p class="text-slate-300 font-bold mb-12 leading-relaxed">모손라이프는 “모르면 손해”인 통신 정보를 대신 공부하고,<br/>고객에게 유리한 조건만 추려서 안내해 드리는 최고의 통신 파트너입니다.</p>
+                <div class="grid md:grid-cols-2 gap-8 text-left">
+                    <div class="p-8 bg-white/5 rounded-[40px] border border-white/10 shadow-inner"><h4 class="font-black mb-4 text-emerald-400 text-xl">01. 실제 대리점 기준표 기반</h4><p class="text-sm text-slate-400 font-medium leading-relaxed">통신사 원가표를 기준으로 현금지원과 리워드를 투명하게 설계합니다.</p></div>
+                    <div class="p-8 bg-white/5 rounded-[40px] border border-white/10 shadow-inner"><h4 class="font-black mb-4 text-emerald-400 text-xl">02. 한 번의 문의로 3사 비교</h4><p class="text-sm text-slate-400 font-medium leading-relaxed">전화 한 통으로 SKT · KT · LG U+ 모든 조건을 한 번에 매칭해 드립니다.</p></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-24 partner-section relative z-10 overflow-hidden text-center">
+        <h2 class="text-3xl font-black text-white uppercase italic tracking-tighter mb-16">실시간 제휴 대리점 네트워크 (300+)</h2>
+        <div class="swiper partnerSwiper">
+            <div class="swiper-wrapper" id="partner-slides"></div>
+        </div>
+    </section>
+
+    <footer class="bg-slate-950 py-24 pb-48 text-center border-t-8 border-emerald-500">
+        <div class="text-3xl font-black mb-10" style="color: var(--moson-mint);">MOSON<span class="text-white">.life</span></div>
+        <p class="text-xs leading-loose px-6 max-w-2xl mx-auto mb-10 text-slate-500 font-medium">
+            담당: {{ tenant_company_name }} | 대표번호: {{ tenant_phone }} | 이메일: {{ tenant_email }}<br/>
+            사업자등록번호: 000-00-00000 | 본사: 서울특별시 강남구 모손빌딩 12층<br/>
+            이용약관 | <b>개인정보처리방침</b> | 실시간 통신 역경매 데이터 엔진 v12.0<br/>
+            © 2026 MOSON.life. All rights reserved.
+        </p>
+    </footer>
+
+    <div class="fixed-consult">
+        <a href="https://pf.kakao.com/_QKdgG" target="_blank" class="icon-btn kakao">
+            <i class="fas fa-comment-dots"></i>
+        </a>
+        <a href="tel:{{ tenant_phone }}" class="icon-btn phone">
+            <i class="fas fa-phone-alt"></i>
+        </a>
+    </div>
+
+    <script>
+        AOS.init();
+        
+        const POLICY = {{ policy_summary_json|safe }};
+
+        // 개통 사례 슬라이더
+        new Swiper('.caseSwiper', { loop: true, autoplay: { delay: 3000 }, direction: 'vertical' });
+
+        let state = { telco: 'LG', group: '', rowId: null };
+
+        function calcState(k, v, el) {
+            state[k] = v;
+            if (el) {
+                el.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('selected-btn'));
+                el.classList.add('selected-btn');
+            }
+            rebuildGroupOptions();
+        }
+
+        function currentTelcoKey() {
+            return state.telco === 'ANY' ? 'ANY' : state.telco;
+        }
+
+        /** 선택 통신사에 해당하는 정책 행 목록 (SKT면 SKT+SKB 통합) */
+        function getRowsForTelco() {
+            const telKey = currentTelcoKey();
+            if (telKey === 'ANY') {
+                const list = [];
+                for (const t of ['KT', 'LG', 'SKT']) {
+                    if (Array.isArray(POLICY[t])) list.push(...POLICY[t]);
+                }
+                return list;
+            }
+            return Array.isArray(POLICY[telKey]) ? POLICY[telKey] : [];
+        }
+
+        function rebuildGroupOptions() {
+            const select = document.getElementById('f_group');
+            const rows = getRowsForTelco();
+            const kinds = [...new Set(rows.map(r => r.kind).filter(Boolean))].sort();
+            select.innerHTML = '';
+            if (!kinds.length) {
+                select.innerHTML = '<option value="">정책표에 등록된 상품 구성이 없습니다</option>';
+                document.getElementById('f_product').innerHTML = '<option value="">선택 불가</option>';
+                return;
+            }
+            kinds.forEach((kind, idx) => {
+                const opt = document.createElement('option');
+                opt.value = kind;
+                opt.textContent = kind;
+                if (idx === 0) opt.selected = true;
+                select.appendChild(opt);
+            });
+            state.group = kinds[0];
+            rebuildProductOptions();
+        }
+
+        function applyQuoteToForm() {
+            const q = state.lastQuote;
+            const line1 = document.getElementById('quoteSummaryLine1');
+            const line2 = document.getElementById('quoteSummaryLine2');
+            const rowIdInput = document.getElementById('quote_row_id');
+            const telInput = document.getElementById('quote_telco');
+            const kindInput = document.getElementById('quote_kind');
+            const prodInput = document.getElementById('quote_product_name');
+            const monthInput = document.getElementById('quote_month_fee');
+            const cashInput = document.getElementById('quote_cash_support');
+            if (!line1) return;
+            if (!q) {
+                line1.textContent = '아직 조건을 선택하지 않으셨습니다. 위에서 현금지원액을 먼저 확인해 주세요.';
+                if (line2) line2.textContent = '';
+                if (rowIdInput) rowIdInput.value = '';
+                if (telInput) telInput.value = '';
+                if (kindInput) kindInput.value = '';
+                if (prodInput) prodInput.value = '';
+                if (monthInput) monthInput.value = '';
+                if (cashInput) cashInput.value = '';
+                return;
+            }
+            const summary = [q.telco, q.kind, q.product_name].filter(Boolean).join(' / ');
+            line1.textContent = summary || '선택한 조건 요약 정보가 없습니다.';
+            if (line2) {
+                const parts = [];
+                if (q.month_fee != null) parts.push('월 ' + q.month_fee.toLocaleString() + '원');
+                if (q.cash != null) parts.push('예상 현금지원 ' + q.cash.toLocaleString() + '원');
+                line2.textContent = parts.join(' · ');
+            }
+            if (rowIdInput) rowIdInput.value = q.rowId || '';
+            if (telInput) telInput.value = q.telco || '';
+            if (kindInput) kindInput.value = q.kind || '';
+            if (prodInput) prodInput.value = q.product_name || '';
+            if (monthInput) monthInput.value = q.month_fee != null ? q.month_fee : '';
+            if (cashInput) cashInput.value = q.cash != null ? q.cash : '';
+        }
+
+        function rebuildProductOptions() {
+            const group = document.getElementById('f_group').value;
+            const prodSelect = document.getElementById('f_product');
+            const rows = getRowsForTelco().filter(r => r.kind === group);
+            prodSelect.innerHTML = '';
+            if (!rows.length) {
+                prodSelect.innerHTML = '<option value="">해당 구성의 상품이 없습니다</option>';
+                state.rowId = null;
+                updateQuote();
+                return;
+            }
+            const productNameCount = {};
+            rows.forEach(r => { productNameCount[r.product_name] = (productNameCount[r.product_name] || 0) + 1; });
+            rows.forEach((row, idx) => {
+                const opt = document.createElement('option');
+                opt.value = row.id;
+                let label = row.product_name;
+                if (row.category && productNameCount[row.product_name] > 1) label += ' (' + row.category + ')';
+                if (row.month_fee != null) label += ' / 월 ' + Number(row.month_fee).toLocaleString() + '원';
+                opt.textContent = label;
+                if (idx === 0) opt.selected = true;
+                prodSelect.appendChild(opt);
+            });
+            state.rowId = rows[0].id;
+            updateQuote();
+        }
+
+        function onGroupChange() {
+            state.group = document.getElementById('f_group').value;
+            rebuildProductOptions();
+        }
+
+        async function updateQuote() {
+            const prodSelect = document.getElementById('f_product');
+            const rowId = prodSelect && prodSelect.value ? parseInt(prodSelect.value, 10) : null;
+            const oCash = document.getElementById('o_cash');
+            const oMonthly = document.getElementById('o_monthly');
+            const oCashNote = document.getElementById('o_cash_note');
+            if (!rowId || isNaN(rowId)) {
+                oCash.textContent = '-';
+                oMonthly.textContent = '월 -';
+                oCashNote.classList.add('hidden');
+                return;
+            }
+            const url = '/api/policy-quote?row_id=' + encodeURIComponent(rowId);
+            oCash.textContent = '조회 중…';
+            oMonthly.textContent = '월 -';
+            oCashNote.classList.add('hidden');
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (!data.ok) {
+                    oCash.textContent = '0원';
+                    return;
+                }
+                const total = data.total_cash != null ? data.total_cash : (data.cash_support || 0);
+                oCash.textContent = total.toLocaleString() + '원';
+                if (data.has_voucher && data.voucher) {
+                    oCashNote.classList.remove('hidden');
+                    oCashNote.textContent = '+ 상품권 ' + data.voucher.toLocaleString() + '원 포함 (KT)';
+                }
+                oMonthly.textContent = data.month_fee != null ? '월 ' + data.month_fee.toLocaleString() + '원' : '월 상담확정';
+                state.lastQuote = {
+                    rowId: rowId,
+                    telco: data.telco || state.telco,
+                    kind: document.getElementById('f_group').value || '',
+                    product_name: prodSelect.options[prodSelect.selectedIndex] ? prodSelect.options[prodSelect.selectedIndex].text : '',
+                    month_fee: data.month_fee,
+                    cash: total,
+                };
+            } catch (e) {
+                oCash.textContent = '0원';
+                oMonthly.textContent = '월 -';
+            }
+        }
+
+        function showBidLoading(show) {
+            const el = document.getElementById('bidLoading');
+            if (!el) return;
+            if (show) el.classList.remove('hidden');
+            else el.classList.add('hidden');
+        }
+
+        async function startBid() {
+            const form = document.getElementById('consultForm');
+            const nameInput = document.getElementById('f_name');
+            const phoneInput = document.getElementById('f_phone');
+            if (!form || !nameInput || !phoneInput) return;
+            if (!nameInput.value.trim() || !phoneInput.value.trim()) {
+                alert('성함과 연락처를 먼저 입력해 주세요.');
+                return;
+            }
+            if (!state.rowId) {
+                alert('먼저 위에서 현금지원액을 계산해 주세요.');
+                return;
+            }
+            const startTs = Date.now();
+            showBidLoading(true);
+            applyQuoteToForm();
+            const fd = new FormData(form);
+            try {
+                await fetch(form.action, { method: 'POST', body: fd });
+            } catch (e) {
+                // ignore
+            }
+            try {
+                const res = await fetch('/api/quote-bids?row_id=' + encodeURIComponent(state.rowId));
+                const data = await res.json();
+                if (!data.ok) {
+                    showBidLoading(false);
+                    alert('입찰 견적 생성 중 오류가 발생했습니다.');
+                    return;
+                }
+                const baseDelay = 2000 + Math.random() * 1000; // 2~3초
+                const elapsed = Date.now() - startTs;
+                const wait = Math.max(0, baseDelay - elapsed);
+                setTimeout(() => {
+                    showBidLoading(false);
+                    openBidModal(data);
+                }, wait);
+            } catch (e) {
+                showBidLoading(false);
+                alert('입찰 견적 생성 중 오류가 발생했습니다.');
+            }
+        }
+
+        function openBidModal(data) {
+            const body = document.getElementById('bidModalBody');
+            const modal = document.getElementById('bidModal');
+            if (!body || !modal) return;
+            body.innerHTML = '';
+            const top = data.top || {};
+            const maxComp = data.max_competitor || 0;
+            const trTop = document.createElement('tr');
+            trTop.innerHTML = `
+              <td class="p-2 font-black text-emerald-700">모손라이프 (최고가 + 리워드)</td>
+              <td class="p-2 text-right font-black text-emerald-700">
+                ${(top.amount || 0).toLocaleString()}원
+                <div class="text-[11px] font-bold text-orange-500 mt-1">리워드 ${(top.reward_extra_min/10000)||3}~${(top.reward_extra_max/10000)||15}만원 포함</div>
+              </td>
+              <td class="p-2 text-center">
+                  <button type="button"
+                          onclick="onBidApplyClick()"
+                          class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    신청하기
+                  </button>
+              </td>
+            `;
+            body.appendChild(trTop);
+            (data.competitors || []).forEach((c) => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td class="p-2">${c.name}</td>
+                <td class="p-2 text-right">${c.amount.toLocaleString()}원</td>
+                <td class="p-2 text-center">
+                  
+                </td>
+              `;
+              body.appendChild(tr);
+            });
+            modal.classList.remove('hidden');
+        }
+
+        function closeBidModal() {
+            const modal = document.getElementById('bidModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function onBidApplyClick() {
+            alert('담당자가 연락 드리겠습니다.');
+            closeBidModal();
+        }
+
+        function updateReward() {
+            const val = document.getElementById('refSlider').value;
+            document.getElementById('refCount').innerText = val;
+            document.getElementById('rewardOut').innerText = (val * 100000).toLocaleString() + "원";
+        }
+
+        const slideContainer = document.getElementById('partner-slides');
+const PARTNERS = {{ partners_json|safe }};
+const PER_SLIDE = 60;
+const totalSlides = Math.ceil(PARTNERS.length / PER_SLIDE);
+
+for (let s = 0; s < totalSlides; s++) {
+    const slide = document.createElement('div');
+    slide.className = 'swiper-slide';
+    const grid = document.createElement('div');
+    grid.className = 'partner-grid';
+
+    const start = s * PER_SLIDE;
+    const end = Math.min(start + PER_SLIDE, PARTNERS.length);
+    for (let i = start; i < end; i++) {
+        const item = document.createElement('div');
+        item.className = 'partner-item';
+        item.innerText = `${PARTNERS[i].idx} ${PARTNERS[i].name} ${PARTNERS[i].phone}`;
+        grid.appendChild(item);
+    }
+    slide.appendChild(grid);
+    slideContainer.appendChild(slide);
+}
+
+        new Swiper('.reviewSwiper', { slidesPerView: 1, spaceBetween: 30, loop: true, navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }, breakpoints: { 1024: { slidesPerView: 3 } } });
+        new Swiper('.partnerSwiper', { loop: true, autoplay: { delay: 3000 } });
+
+        function scrollToForm() {
+            applyQuoteToForm();
+            document.getElementById('form').scrollIntoView({ behavior: 'smooth' });
+        }
+        rebuildGroupOptions();
+        updateReward();
+    </script>
+<script>
+  (function(){
+    const params = new URLSearchParams(window.location.search);
+    const showToast = (message) => {
+      const note = document.createElement('div');
+      note.style.position='fixed';
+      note.style.left='50%';
+      note.style.bottom='28px';
+      note.style.transform='translateX(-50%)';
+      note.style.zIndex='9999';
+      note.style.padding='14px 18px';
+      note.style.borderRadius='999px';
+      note.style.background='rgba(16,185,129,0.95)';
+      note.style.color='white';
+      note.style.fontWeight='800';
+      note.style.boxShadow='0 20px 60px rgba(0,0,0,0.35)';
+      note.innerText=message;
+      document.body.appendChild(note);
+      setTimeout(()=>{ note.remove(); }, 4500);
+    };
+
+    if(params.get('sent') === '1'){
+      showToast('✅ 신청이 접수되었습니다. 곧 연락드릴게요!');
+    } else if(params.get('partner') === '1') {
+      showToast('✅ 부업 파트너 신청이 접수되었습니다. 운영진이 검토 후 연락드립니다.');
+    }
+  })();
+</script>
+</body>
+</html>

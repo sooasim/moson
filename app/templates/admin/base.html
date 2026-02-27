@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>{{ title or "MOSON Admin" }}</title>
+  <link rel="stylesheet" href="/static/site.css"/>
+  <style>
+    :root { --bg:#0b1220; --card:#0f172a; --muted:#94a3b8; --fg:#e2e8f0; --accent:#10b981; }
+    body{ margin:0; background:linear-gradient(180deg,#020617,#0b1220 50%,#020617); color:var(--fg); }
+    *, *::before, *::after{ box-sizing:border-box; }
+    a{ color:inherit; }
+    .wrap{ max-width:1100px; margin:0 auto; padding:24px 16px 80px; }
+    .wrap.wrap-full{ max-width:none; width:100%; padding-left:24px; padding-right:24px; box-sizing:border-box; }
+    .top{ display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .brand{ font-weight:900; letter-spacing:-.02em; font-size:20px; }
+    .pill{ display:inline-flex; gap:8px; align-items:center; padding:8px 12px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); }
+    .card{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10); border-radius:18px; padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+    .grid{ display:grid; gap:16px; grid-template-columns: 1fr; }
+    @media (min-width: 980px){ .grid{ grid-template-columns: 1.2fr .8fr; } }
+    .scroll-panel{ overflow:auto; margin-top:10px; max-height:420px; border-radius:14px; }
+    table{ width:100%; min-width:900px; border-collapse:collapse; font-size:14px; }
+    th,td{ padding:10px 8px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align:top; }
+    th{ text-align:left; color:var(--muted); font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
+    input,select{ width:100%; max-width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(2,6,23,.6); color:var(--fg); outline:none; }
+    label{ font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; display:block; margin:10px 0 6px; }
+    button{ padding:10px 14px; border-radius:14px; border:1px solid rgba(255,255,255,.14); background:rgba(16,185,129,.15); color:var(--fg); font-weight:900; cursor:pointer; }
+    button:hover{ background:rgba(16,185,129,.22); }
+    .btn-secondary{ background:rgba(255,255,255,.06); }
+    .muted{ color:var(--muted); }
+    .flash{ margin:12px 0; padding:12px 14px; border-radius:14px; border:1px solid rgba(16,185,129,.35); background:rgba(16,185,129,.12); font-weight:800; }
+    .danger{ border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.12); }
+    .nav-main{ display:flex; gap:10px; margin-top:6px; flex-wrap:wrap; }
+    .nav-main a{ font-size:12px; padding:4px 10px; border-radius:999px; border:1px solid rgba(148,163,184,.45); background:rgba(15,23,42,.7); color:var(--muted); text-decoration:none; }
+    .nav-main a.active{ border-color:rgba(16,185,129,.7); color:#a7f3d0; background:rgba(16,185,129,.18); }
+  </style>
+</head>
+<body>
+  <div class="wrap {% if request.path == '/admin/policy' %}wrap-full{% endif %}">
+    <div class="top">
+      <div>
+        <div class="brand">MOSON.life <span class="muted">Admin</span></div>
+        <div class="muted" style="font-size:12px;margin-top:6px;">
+          {% if tenant and tenant.subdomain %}
+            현재 테넌트: <b>{{ tenant.subdomain }}.{{ base_domain }}</b> ({{ tenant.company_name }})
+          {% else %}
+            현재 테넌트: <b>메인 사이트</b>
+          {% endif %}
+        </div>
+        {% if (not tenant or not tenant.subdomain) and session.get('user_kind') == 'main' %}
+        <div class="nav-main">
+          <a href="{{ url_for('routes.admin_index') }}" class="{% if request.path == '/admin' %}active{% endif %}">대시보드</a>
+          <a href="{{ url_for('routes.admin_reseller_list') }}" class="{% if request.path.startswith('/admin/resellers') %}active{% endif %}">대리점 관리</a>
+          <a href="{{ url_for('routes.admin_policy') }}" class="{% if request.path.startswith('/admin/policy') %}active{% endif %}">정책표</a>
+          {% if session.get('admin_role') == 'master' %}
+          <a href="{{ url_for('routes.admin_user_list') }}" class="{% if request.path.startswith('/admin/users') %}active{% endif %}">회원관리</a>
+          {% endif %}
+          <a href="{{ url_for('routes.admin_script_templates') }}" class="{% if request.path.startswith('/admin/scripts') %}active{% endif %}">상담 스크립트/FAQ</a>
+          <a href="{{ url_for('routes.admin_notify_settings') }}" class="{% if request.path.startswith('/admin/notify') %}active{% endif %}">알림 연동</a>
+          <a href="{{ url_for('routes.admin_email_logs') }}" class="{% if request.path.startswith('/admin/email-logs') %}active{% endif %}">이메일 로그</a>
+        </div>
+        {% elif tenant and session.get('user_kind') == 'reseller' %}
+        <div class="nav-main">
+          <a href="{{ url_for('routes.admin_index') }}" class="{% if request.path == '/admin' %}active{% endif %}">대시보드</a>
+          <a href="{{ url_for('routes.admin_index') }}#list" class="">신청서 리스트</a>
+          <a href="{{ url_for('routes.admin_script_templates') }}" class="{% if request.path.startswith('/admin/scripts') %}active{% endif %}">상담 스크립트/FAQ</a>
+          <a href="{{ url_for('routes.admin_reseller_profile') }}" class="{% if request.path.startswith('/admin/profile') %}active{% endif %}">내 정보</a>
+        </div>
+        {% endif %}
+      </div>
+      <div class="pill">
+        {% if session.get("user_kind") %}
+          <span class="muted" style="font-size:12px;">{{ session.get("user_kind") }} 로그인</span>
+          <a href="/admin/logout" class="muted" style="text-decoration:none;font-weight:900;">로그아웃</a>
+        {% else %}
+          <span class="muted" style="font-size:12px;">로그인 필요</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat,msg in messages %}
+          <div class="flash {% if cat == 'error' %}danger{% endif %}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

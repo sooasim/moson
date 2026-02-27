@@ -1,0 +1,474 @@
+{% extends "admin/base.html" %}
+{% block title %}정책표 - {{ super() }}{% endblock %}
+
+{% block content %}
+<style>
+  /* 정책표 페이지: PC 화면 넓이에 가득 차게 반응형 */
+  .policy-page .card { width: 100%; max-width: 100%; }
+  .policy-page .card-body { width: 100%; }
+  .policy-page .scroll-panel { max-width: 100%; max-height: min(70vh, 600px); overflow: auto; }
+  .policy-page .table { width: 100%; min-width: 800px; table-layout: auto; }
+  .policy-page .table th, .policy-page .table td { padding: 8px 10px; font-size: 13px; }
+  @media (min-width: 1200px) {
+    .policy-page .scroll-panel { max-height: min(72vh, 700px); }
+  }
+</style>
+<div class="policy-page">
+<form method="post" action="{{ url_for('routes.admin_policy_bulk_update') }}">
+<div class="card">
+  <div class="card-header">
+    <h2>통신 상품 정책표</h2>
+    <p class="muted" style="font-size:13px;">
+      moson_policy.xlsx 내용을 기반으로 한 정책표입니다.<br>
+      <strong>KT 도매 / LG 도매 / SKT 도매 / SKB 도매</strong> 4개 박스로 나누어,
+      각 통신사별 엑셀 항목 구조에 맞춰 표시합니다.<br>
+      각 행의 <strong>현금(VAT 포함/별도)</strong> / <strong>경품가이드</strong>를 수정하면
+      내부적으로 <strong>최종 경품금액</strong>과 <strong>현금</strong> 값이 자동으로 재계산됩니다.
+    </p>
+  </div>
+</div>
+
+{% set group_order = ["KT 도매", "LG 도매", "SKT 도매", "SKB 도매", "기타"] %}
+{% set is_reseller = tenant and session.get('user_kind') == 'reseller' %}
+{% set admin_role = session.get('admin_role') %}
+
+{% for g in group_order %}
+  {% set g_rows = groups.get(g) if groups else [] %}
+  {% if g_rows and g_rows|length > 0 %}
+  <div class="card" style="margin-top:16px;">
+    <div class="card-header">
+      <h3 style="font-size:18px; font-weight:600;">{{ g }}</h3>
+    </div>
+    <div class="card-body scroll-panel">
+      {% if g == "KT 도매" %}
+      {# ----------------------------------------------------
+         KT 도매
+         종류 | 구분 | 상품명 | 월요금 | 정액결합 모바일37K↑ |
+         총액결합 모바일65K↑ | 프리미엄가족 | 프리미엄싱글 |
+         경품가이드 | 최종 경품금액 | 현금 | 현금 VAT포함 | 최종수수료(상품권+현금 합산)
+         ---------------------------------------------------- #}
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:70px;">ID</th>
+            <th style="min-width:90px;">종류</th>
+            <th style="min-width:90px;">구분</th>
+            <th style="min-width:200px;">상품명</th>
+            <th style="min-width:90px;">월요금</th>
+            <th style="min-width:120px;">정액결합<br>모바일 37K↑</th>
+            <th style="min-width:120px;">총액결합<br>모바일 65K↑</th>
+            <th style="min-width:110px;">프리미엄가족</th>
+            <th style="min-width:110px;">프리미엄싱글</th>
+            <th style="min-width:220px;">경품가이드</th>
+            <th style="min-width:90px;">상품권</th>
+            <th style="min-width:120px;">최종 경품금액<br>(원)</th>
+            <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            {% if not is_reseller %}
+            <th style="min-width:100px;">현금</th>
+            <th style="min-width:120px;">현금<br>VAT포함</th>
+            <th style="min-width:140px;">최종수수료<br>(상품권+현금 합산)</th>
+            {% endif %}
+            <th style="width:60px;">저장</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in g_rows %}
+          <tr>
+            <td class="muted">{{ r.id }}</td>
+            <td>{{ r.kind or '-' }}</td>
+            <td>{{ r.category or '-' }}</td>
+            <td>{{ r.product_name or '-' }}</td>
+            <td>
+              {% if r.month_fee is not none %}{{ "{:,}".format(r.month_fee) }}원{% else %}-{% endif %}
+            </td>
+            <td>{{ r.promo1 or '-' }}</td>
+            <td>{{ r.promo2 or '-' }}</td>
+            <td>{{ r.promo3 or '-' }}</td>
+            <td>{{ r.promo4 or '-' }}</td>
+
+            <td>
+                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:100%; max-width:220px;">
+            </td>
+            <td class="text-right">
+              {% if r.voucher is not none %}
+                {{ "{:,}".format(r.voucher) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="text-right">
+              {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
+            </td>
+            <td class="text-right">
+              {% if r.cash is not none %}
+                {% set rf = (r.cash * 25) // 100 %}
+                {{ "{:,}".format(rf) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            {% if not is_reseller %}
+            <td class="text-right">
+              {% if r.cash is not none %}
+                {{ "{:,}".format(r.cash) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+                <input type="text" name="cash_vat_{{ r.id }}" value="{{ r.cash_vat if r.cash_vat is not none else '' }}" style="max-width:120px;">
+            </td>
+            <td class="text-right">
+              {% if r.total_fee is not none %}
+                {{ "{:,}".format(r.total_fee) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            {% endif %}
+            <td style="text-align:center;">
+                {% if not is_reseller and admin_role == 'master' %}
+                <button type="submit" class="btn btn-xs" title="전체 저장">
+                  💾
+                </button>
+                {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% elif g == "LG 도매" %}
+      {# ----------------------------------------------------
+         LG 도매: 종류 | 구분 | 상품명 | 월요금 | 참쉬운 | 투게더 | 인터넷끼리 |
+         경품가이드 | 최종 경품금액(만원) | 상품권 | 현금 | 현금 VAT포함 | 상품권+현금 VAT포함
+         참쉬운=promo1, 투게더=promo2, 인터넷끼리=promo3 (매핑 통일)
+         ---------------------------------------------------- #}
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:70px;">ID</th>
+            <th style="min-width:90px;">종류</th>
+            <th style="min-width:90px;">구분</th>
+            <th style="min-width:200px;">상품명</th>
+            <th style="min-width:90px;">월요금</th>
+            <th style="min-width:90px;">참쉬운</th>
+            <th style="min-width:90px;">투게더</th>
+            <th style="min-width:110px;">인터넷끼리</th>
+            <th style="min-width:220px;">경품가이드</th>
+            <th style="min-width:120px;">최종 경품금액<br>(원)</th>
+            <th style="min-width:90px;">상품권</th>
+            <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            {% if not is_reseller %}
+            <th style="min-width:100px;">현금</th>
+            <th style="min-width:120px;">현금<br>VAT포함</th>
+            <th style="min-width:140px;">상품권+현금<br>VAT포함</th>
+            {% endif %}
+            <th style="width:60px;">저장</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in g_rows %}
+          <tr>
+            <td class="muted">{{ r.id }}</td>
+            <td>{{ r.kind or '-' }}</td>
+            <td>{{ r.category or '-' }}</td>
+            <td>{{ r.product_name or '-' }}</td>
+            <td>
+              {% if r.month_fee is not none %}{{ "{:,}".format(r.month_fee) }}원{% else %}-{% endif %}
+            </td>
+            <td>{{ r.promo1 or '-' }}</td>
+            <td>{{ r.promo2 or '-' }}</td>
+            <td>{{ r.promo3 or '-' }}</td>
+
+            <td>
+                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:100%; max-width:220px;">
+            </td>
+            <td class="text-right">
+              {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
+            </td>
+            <td>
+              {% if r.voucher is not none %}
+                {{ "{:,}".format(r.voucher) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="text-right">
+              {% if r.cash is not none %}
+                {% set rf = (r.cash * 25) // 100 %}
+                {{ "{:,}".format(rf) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            {% if not is_reseller %}
+            <td class="text-right">
+              {% if r.cash is not none %}
+                {{ "{:,}".format(r.cash) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+                <input type="text" name="cash_vat_{{ r.id }}" value="{{ r.cash_vat if r.cash_vat is not none else '' }}" style="max-width:120px;">
+            </td>
+            <td class="text-right">
+              {% if r.total_fee is not none %}
+                {{ "{:,}".format(r.total_fee) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            {% endif %}
+            <td style="text-align:center;">
+                {% if not is_reseller and admin_role == 'master' %}
+                <button type="submit" class="btn btn-xs" title="전체 저장">
+                  💾
+                </button>
+                {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% elif g == "SKB 도매" %}
+      {# ----------------------------------------------------
+         SKB 도매: 종류 | 상품명 | 월요금 | 요즘가족(알뜰한) | 패밀리 |
+         온가족할인 1년미만 | 2년미만 | 3년미만 | 3년이상 |
+         경품가이드 | 최종 경품금액(만원) | 현금 | 현금 VAT포함
+         매핑: promo1=요즘가족, promo2=패밀리, promo3=1년미만, promo4=2년미만 (3년미만/3년이상은 데이터 없으면 -)
+         ---------------------------------------------------- #}
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:70px;">ID</th>
+            <th style="min-width:90px;">종류</th>
+            <th style="min-width:200px;">상품명</th>
+            <th style="min-width:90px;">월요금</th>
+            <th style="min-width:110px;">요즘가족<br>(알뜰한)</th>
+            <th style="min-width:90px;">패밀리</th>
+            <th style="min-width:130px;">온가족할인(30년↑)<br>1년 미만</th>
+            <th style="min-width:90px;">2년 미만</th>
+            <th style="min-width:90px;">3년 미만</th>
+            <th style="min-width:90px;">3년 이상</th>
+            <th style="min-width:220px;">경품가이드</th>
+            <th style="min-width:120px;">최종 경품금액<br>(원)</th>
+            <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            {% if not is_reseller %}
+            <th style="min-width:100px;">현금</th>
+            <th style="min-width:120px;">현금<br>VAT포함</th>
+            {% endif %}
+            <th style="width:60px;">저장</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in g_rows %}
+          <tr>
+            <td class="muted">{{ r.id }}</td>
+            <td>{{ r.kind or '-' }}</td>
+            <td>{{ r.product_name or '-' }}</td>
+            <td>
+              {% if r.month_fee is not none %}{{ "{:,}".format(r.month_fee) }}원{% else %}-{% endif %}
+            </td>
+            <td>{{ r.promo1 or '-' }}</td>
+            <td>{{ r.promo2 or '-' }}</td>
+            <td>{{ r.promo3 or '-' }}</td>
+            <td>{{ r.promo4 or '-' }}</td>
+            <td>-</td>
+            <td>-</td>
+
+            <td>
+                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:100%; max-width:220px;">
+            </td>
+            <td class="text-right">
+              {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
+            </td>
+            <td class="text-right">
+              {% if r.cash is not none %}
+                {% set rf = (r.cash * 25) // 100 %}
+                {{ "{:,}".format(rf) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            {% if not is_reseller %}
+            <td class="text-right">
+              {% if r.cash is not none %}
+                {{ "{:,}".format(r.cash) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+                <input type="text" name="cash_vat_{{ r.id }}" value="{{ r.cash_vat if r.cash_vat is not none else '' }}" style="max-width:120px;">
+            </td>
+            {% endif %}
+            <td style="text-align:center;">
+                {% if not is_reseller and admin_role == 'master' %}
+                <button type="submit" class="btn btn-xs" title="전체 저장">
+                  💾
+                </button>
+                {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% elif g == "SKT 도매" %}
+      {# ----------------------------------------------------
+         SKT 도매: 종류 | 상품명 | 월요금 | 요즘가족 | 패밀리 |
+         온가족할인 1년미만 | 2년미만 | 3년미만 | 3년이상 |
+         경품가이드 | 최종 경품금액(만원) | 현금 | 현금 VAT별도
+         매핑: promo1=요즘가족, promo2=패밀리, promo3=1년미만, promo4=2년미만
+         ---------------------------------------------------- #}
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:70px;">ID</th>
+            <th style="min-width:90px;">종류</th>
+            <th style="min-width:200px;">상품명</th>
+            <th style="min-width:90px;">월요금</th>
+            <th style="min-width:90px;">요즘가족</th>
+            <th style="min-width:90px;">패밀리</th>
+            <th style="min-width:130px;">온가족할인(30년↑)<br>1년 미만</th>
+            <th style="min-width:90px;">2년 미만</th>
+            <th style="min-width:90px;">3년 미만</th>
+            <th style="min-width:90px;">3년 이상</th>
+            <th style="min-width:220px;">경품가이드</th>
+            <th style="min-width:120px;">최종 경품금액<br>(원)</th>
+            <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            {% if not is_reseller %}
+            <th style="min-width:100px;">현금</th>
+            <th style="min-width:120px;">현금<br>VAT별도</th>
+            {% endif %}
+            <th style="width:60px;">저장</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in g_rows %}
+          <tr>
+            <td class="muted">{{ r.id }}</td>
+            <td>{{ r.kind or '-' }}</td>
+            <td>{{ r.product_name or '-' }}</td>
+            <td>
+              {% if r.month_fee is not none %}{{ "{:,}".format(r.month_fee) }}원{% else %}-{% endif %}
+            </td>
+            <td>{{ r.promo1 or '-' }}</td>
+            <td>{{ r.promo2 or '-' }}</td>
+            <td>{{ r.promo3 or '-' }}</td>
+            <td>{{ r.promo4 or '-' }}</td>
+            <td>-</td>
+            <td>-</td>
+
+            <td>
+                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:100%; max-width:220px;">
+            </td>
+            <td class="text-right">
+              {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
+            </td>
+            <td class="text-right">
+              {% if r.cash is not none %}
+                {% set rf = (r.cash * 25) // 100 %}
+                {{ "{:,}".format(rf) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            {% if not is_reseller %}
+            <td class="text-right">
+              {% if r.cash is not none %}
+                {{ "{:,}".format(r.cash) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+                <input type="text" name="cash_vat_{{ r.id }}" value="{{ r.cash_vat if r.cash_vat is not none else '' }}" style="max-width:120px;">
+            </td>
+            {% endif %}
+            <td style="text-align:center;">
+                {% if not is_reseller and admin_role == 'master' %}
+                <button type="submit" class="btn btn-xs" title="전체 저장">
+                  💾
+                </button>
+                {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% else %}
+      {# 기타: 기본 테이블 구조 #}
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:80px;">ID</th>
+            <th style="min-width:120px;">통신사</th>
+            <th style="min-width:200px;">상품명</th>
+            <th style="min-width:80px;">속도</th>
+            <th style="min-width:260px;">경품가이드</th>
+            <th style="min-width:140px;">최종 경품금액<br>(원)</th>
+            <th style="min-width:130px;">현금</th>
+            <th style="min-width:150px;">현금 VAT포함</th>
+            <th style="width:70px;">저장</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in g_rows %}
+          <tr>
+            <td class="muted">{{ r.id }}</td>
+            <td>{{ r.telco or '-' }}</td>
+            <td>{{ r.product_name or '-' }}</td>
+            <td>{{ r.speed or '-' }}</td>
+
+            <td>
+                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:100%; max-width:260px;">
+            </td>
+            <td class="text-right">
+              {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
+            </td>
+            {# 현금 = 현금 VAT포함 - 최종 경품금액 #}
+            <td class="text-right">
+              {% if r.cash is not none %}
+                {{ "{:,}".format(r.cash) }}원
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td>
+                <input type="text" name="cash_vat_{{ r.id }}" value="{{ r.cash_vat if r.cash_vat is not none else '' }}" style="max-width:120px;">
+            </td>
+            <td style="text-align:center;">
+                <button type="submit" class="btn btn-xs" title="전체 저장">
+                  💾
+                </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+{% endfor %}
+
+{% if not groups or (groups["KT 도매"]|length == 0 and groups["LG 도매"]|length == 0 and groups["SKT 도매"]|length == 0 and groups["SKB 도매"]|length == 0 and groups["기타"]|length == 0) %}
+  <div class="card" style="margin-top:16px;">
+    <div class="card-body">
+      <p class="muted" style="text-align:center; padding:40px 0;">
+        아직 정책 데이터가 없습니다. moson_policy.xlsx에서 불러오거나 직접 추가해 주세요.
+      </p>
+    </div>
+  </div>
+{% endif %}
+
+</form>
+</div>
+{% endblock %}
+

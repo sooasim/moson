@@ -1,0 +1,190 @@
+{% extends "admin/base.html" %}
+{% block content %}
+  <style>
+    .status-pill {
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      margin-bottom:4px;
+    }
+    .status-pill[data-status="신규"] { background:#e5e7eb; color:#111827; }
+    .status-pill[data-status="상담중"] { background:#dbeafe; color:#1d4ed8; }
+    .status-pill[data-status="서류대기"] { background:#ede9fe; color:#5b21b6; }
+    .status-pill[data-status="접수완료"] { background:#cffafe; color:#0891b2; }
+    .status-pill[data-status="개통완료"] { background:#dcfce7; color:#166534; }
+    .status-pill[data-status="정산대기"] { background:#fef9c3; color:#92400e; }
+    .status-pill[data-status="정산완료"] { background:#bbf7d0; color:#166534; }
+    .status-pill[data-status="반려"] { background:#fee2e2; color:#b91c1c; }
+  </style>
+  <div class="card" style="margin-top:16px;margin-bottom:16px;">
+    <h2 style="margin:0 0 4px 0;">방문자 요약 (최근 24시간)</h2>
+    <p class="muted" style="margin:0 0 12px 0;font-size:11px;">
+      일일 방문자: <b>{{ visits_24h or 0 }}</b> · 주간 방문자: <b>{{ visits_7d or 0 }}</b> · 월간 방문자: <b>{{ visits_30d or 0 }}</b> · 전체 방문자: <b>{{ total_visits or 0 }}</b>
+    </p>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;">
+      <div style="flex:1 1 140px;">
+        <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">전체 누적 방문</div>
+        <div style="font-size:22px;font-weight:900;">{{ total_visits or 0 }} <span class="muted" style="font-size:12px;">(봇 {{ total_bots or 0 }} 포함)</span></div>
+      </div>
+      <div style="flex:1 1 120px;">
+        <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">24h 방문수</div>
+        <div style="font-size:22px;font-weight:900;">{{ visits_24h or 0 }}</div>
+      </div>
+      <div style="flex:1 1 120px;">
+        <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">24h 순수 IP</div>
+        <div style="font-size:22px;font-weight:900;">{{ unique_ips_24h or 0 }}</div>
+      </div>
+      <div style="flex:1 1 120px;">
+        <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">24h 봇</div>
+        <div style="font-size:22px;font-weight:900;">{{ bots_24h or 0 }}</div>
+      </div>
+      <div style="flex:1 1 140px;">
+        <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">24h 디바이스</div>
+        <div style="font-size:22px;font-weight:900;">
+          PC {{ desktops_24h or 0 }} / 모바일 {{ mobiles_24h or 0 }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;">
+        <h2 style="margin:0;">가입/견적 신청 리스트</h2>
+        <div class="muted" style="font-size:12px;">총 {{ consults|length }}건</div>
+      </div>
+      <div class="scroll-panel">
+        <table>
+          <thead>
+          <tr>
+            <th style="width:72px;">일시</th>
+            <th>대리점</th>
+            <th style="min-width:72px;">고객</th>
+            <th>전화</th>
+            <th>통신사</th>
+            <th>상품</th>
+            <th>구성/속도</th>
+            <th>원본 Host</th>
+            <th>상태</th>
+            <th>메모</th>
+          </tr>
+          </thead>
+          <tbody>
+            {% for r in consults %}
+              <tr id="consult-{{ r.id }}">
+                <td class="muted">
+                  {{ (r.created_at|to_kst).strftime("%m-%d") }}<br>
+                  {{ (r.created_at|to_kst).strftime("%H:%M") }}
+                </td>
+                <td>
+                  {% if r.reseller %}
+                    <b>{{ r.reseller.company_name }}</b><br><span class="muted">{{ r.reseller.subdomain }}.{{ base_domain }}</span>
+                  {% else %}
+                    <b>메인</b>
+                  {% endif %}
+                </td>
+                <td style="font-weight:600;">{{ r.customer_name or "-" }}</td>
+                <td>{{ r.customer_phone or "-" }}</td>
+                <td class="muted">{{ r.telcos or "-" }}</td>
+                <td class="muted">{{ r.products or "-" }}</td>
+              <td class="muted">{{ (r.bundle or "-") ~ " / " ~ (r.speed or "-") }}</td>
+              <td class="muted">{{ r.source_host or "-" }}</td>
+              <td>
+                {% set cur = (r.status_obj.status if r.status_obj else '신규') %}
+                <div style="margin-bottom:4px;">
+                  <span class="status-pill" data-status="{{ cur }}">{{ cur }}</span>
+                </div>
+                <select name="status"
+                        form="consult-form-{{ r.id }}"
+                        style="font-size:12px;padding:6px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(15,23,42,.7);color:#e2e8f0;min-width:120px;">
+                  {% for opt in ['신규','상담중','서류대기','접수완료','개통완료','정산대기','정산완료','반려'] %}
+                    <option value="{{ opt }}" {% if cur == opt %}selected{% endif %}>{{ opt }}</option>
+                  {% endfor %}
+                </select>
+                {% set cur_reason = (r.status_obj.reason if r.status_obj else '') %}
+                <select name="reject_reason"
+                        form="consult-form-{{ r.id }}"
+                        style="margin-top:4px;font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid rgba(148,163,184,.6);background:rgba(15,23,42,.7);color:#cbd5f5;min-width:120px;">
+                  <option value="">반려 사유 선택</option>
+                  {% for opt in ['연락두절','중복','조건불가','허위','기타'] %}
+                    <option value="{{ opt }}" {% if cur_reason == opt %}selected{% endif %}>{{ opt }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td>
+                <form id="consult-form-{{ r.id }}" method="post" action="/admin/consults/{{ r.id }}/status" style="display:flex;gap:6px;align-items:stretch;min-width:260px;">
+                  <textarea name="memo"
+                            rows="2"
+                            placeholder="메모 입력"
+                            style="flex:1;font-size:12px;padding:6px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(15,23,42,.6);color:#e2e8f0;resize:vertical;min-height:48px;">{{ r.status_obj.memo if r.status_obj and r.status_obj.memo else '' }}</textarea>
+                  <button type="submit"
+                          style="padding:6px 10px;font-size:11px;border-radius:999px;border:1px solid rgba(16,185,129,.6);background:rgba(16,185,129,.18);font-weight:800;cursor:pointer;white-space:nowrap;align-self:flex-start;">
+                    저장
+                  </button>
+                </form>
+              </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2 style="margin:0 0 8px 0;">대리점 관리하기</h2>
+    <p class="muted" style="margin:0 0 12px 0;font-size:12px;line-height:1.6;">
+      대리점 생성, 정보 수정, 정산 계좌 관리는 <b>대리점 관리</b> 메뉴에서 한 번에 처리할 수 있습니다.<br/>
+      아래 버튼을 누르면 대리점 목록 페이지로 이동합니다.
+    </p>
+    <a href="{{ url_for('routes.admin_reseller_list') }}" class="pill" style="text-decoration:none;font-size:12px;display:inline-flex;margin-top:4px;">대리점 관리 열기</a>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2 style="margin:0 0 8px 0;">최근 방문 로그 (24시간)</h2>
+    <div class="muted" style="font-size:12px;margin-bottom:8px;">IP / 봇 여부 / 디바이스 / 경로 기준으로 간단히 확인할 수 있습니다.</div>
+    <div class="scroll-panel">
+      <table>
+        <thead>
+          <tr>
+            <th>일시</th>
+            <th>IP</th>
+            <th>유형</th>
+            <th>디바이스</th>
+            <th>경로</th>
+            <th>테넌트/어드민</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in recent_visits %}
+            <tr>
+              <td>{{ (v.created_at|to_kst).strftime("%Y-%m-%d %H:%M") }}</td>
+              <td class="muted">{{ v.ip or "-" }}</td>
+              <td>
+                {% if v.is_bot %}
+                  <span class="muted">봇</span>
+                {% else %}
+                  <b>유저</b>
+                {% endif %}
+              </td>
+              <td class="muted">
+                {% if v.is_mobile %}모바일{% else %}PC{% endif %}
+              </td>
+              <td class="muted">{{ v.path }}</td>
+              <td class="muted">
+                {% if v.is_admin %}어드민{% else %}프론트{% endif %}
+                {% if v.reseller %}
+                  · {{ v.reseller.subdomain }}
+                {% else %}
+                  · 메인
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

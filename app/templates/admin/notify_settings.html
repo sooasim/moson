@@ -1,0 +1,62 @@
+{% extends "admin/base.html" %}
+{% block content %}
+  <div class="card" style="margin-top:16px;margin-bottom:16px;">
+    <h2 style="margin:0 0 8px 0;">SMS / 카카오 알림톡 연동 준비</h2>
+    <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
+      아직 실제 발송 기능은 연결하지 않았으며, 추후 연동을 위한 설정/정보 구조를 미리 정리해 둔 탭입니다.
+    </p>
+    <div style="font-size:13px;line-height:1.7;">
+      <h3 style="margin:10px 0 4px 0;font-size:13px;">1) 환경변수 설계 (예시)</h3>
+      <ul style="margin:0 0 0 18px;padding:0;list-style:disc;">
+        <li><code>SMS_PROVIDER</code>: kakao / twilio / toast 등</li>
+        <li><code>SMS_API_KEY</code>, <code>SMS_API_SECRET</code></li>
+        <li><code>SMS_SENDER_ID</code>: 발신 프로필/번호</li>
+        <li><code>KAKAO_ALIMTALK_SENDER_KEY</code>, <code>KAKAO_ALIMTALK_TEMPLATE_ID</code></li>
+      </ul>
+
+      <h3 style="margin:14px 0 4px 0;font-size:13px;">2) 언제 발송할지 기준</h3>
+      <ul style="margin:0 0 0 18px;padding:0;list-style:disc;">
+        <li>신규 신청 접수 시: 고객 안내용 / 대리점 알림용</li>
+        <li>상태 변경 시: <b>접수완료 / 개통완료 / 정산완료 / 반려</b> 전환 시 알림</li>
+        <li>정산 안내: 월 단위 정산 금액 안내용</li>
+      </ul>
+
+      <h3 style="margin:14px 0 4px 0;font-size:13px;">3) 템플릿 예시</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:4px;">
+        <thead>
+          <tr>
+            <th>상황</th>
+            <th>문자/알림톡 템플릿 예시</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="muted">신규 신청 접수</td>
+            <td>"[MOSON] {{ 고객명 }}님, 신청이 정상 접수되었습니다. 담당자 확인 후 개별 연락드리겠습니다."</td>
+          </tr>
+          <tr>
+            <td class="muted">개통 완료</td>
+            <td>"[MOSON] {{ 통신사 }} {{ 상품 }} 개통이 완료되었습니다. 약정/요금/사은품 관련 문의는 언제든지 연락주세요."</td>
+          </tr>
+          <tr>
+            <td class="muted">정산 완료</td>
+            <td>"[MOSON] 이번 달 정산 {{ 금액 }}원이 입금되었습니다. 상세 내역은 대리점 어드민에서 확인 가능합니다."</td>
+          </tr>
+          <tr>
+            <td class="muted">반려</td>
+            <td>"[MOSON] 신청 건이 '{{ 반려사유 }}' 사유로 진행이 어려운 상태입니다. 필요 시 다시 문의 부탁드립니다."</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin:14px 0 4px 0;font-size:13px;">4) 차후 구현 시 TODO</h3>
+      <ul style="margin:0 0 0 18px;padding:0;list-style:disc;">
+        <li>환경변수 기반으로 SMS/카카오 API 클라이언트 초기화</li>
+        <li>상담 상태 변경 로직(`admin_update_consult_status`)에서 이벤트 후킹</li>
+        <li>발송 결과를 <b>이메일 로그와 유사한 구조의 SMS 로그</b>로 적재</li>
+        <li>대리점별 발송 여부 On/Off 설정 (정산량이 적은 대리점은 비활성 등)</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}
+

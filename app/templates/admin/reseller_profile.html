@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+{% block content %}
+  <div class="card" style="margin-top:16px;margin-bottom:16px;max-width:720px;">
+    <h2 style="margin:0 0 8px 0;">내 정보 / 랜딩 설정</h2>
+    <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
+      아래 정보는 모손라이프 본사에서 관리되는 대리점 기본 정보입니다. 변경이 필요하시면 본사에 문의해 주세요.
+    </p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tbody>
+        <tr>
+          <th style="width:120px;" class="muted">업체명</th>
+          <td>{{ reseller.company_name }}</td>
+        </tr>
+        <tr>
+          <th class="muted">대표자</th>
+          <td>{{ reseller.representative or '-' }}</td>
+        </tr>
+        <tr>
+          <th class="muted">서브도메인</th>
+          <td>{{ reseller.subdomain }}.{{ base_domain }}</td>
+        </tr>
+        <tr>
+          <th class="muted">대표번호</th>
+          <td>{{ reseller.phone }}</td>
+        </tr>
+        <tr>
+          <th class="muted">이메일</th>
+          <td>{{ reseller.email }}</td>
+        </tr>
+        <tr>
+          <th class="muted">랜딩 URL</th>
+          <td><a href="{{ reseller.website_url }}" target="_blank" rel="noreferrer" class="muted" style="text-decoration:underline;">{{ reseller.website_url }}</a></td>
+        </tr>
+        <tr>
+          <th class="muted">정산 계좌</th>
+          <td>
+            {% if reseller.bank_name or reseller.bank_account %}
+              {{ reseller.bank_name or '' }}{% if reseller.bank_name and reseller.bank_account %} / {% endif %}{{ reseller.bank_account or '' }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
+

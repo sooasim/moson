@@ -1,0 +1,101 @@
+{% extends "admin/base.html" %}
+{% block content %}
+  <div class="card" style="margin-top:16px;margin-bottom:16px;">
+    <h2 style="margin:0 0 12px 0;">방문자 요약 (최근 24시간)</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;">
+      <div style="flex:1 1 140px;">
+        <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">24h 방문수</div>
+        <div style="font-size:22px;font-weight:900;">{{ visits_24h or 0 }}</div>
+      </div>
+      <div style="flex:1 1 140px;">
+        <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">24h 봇</div>
+        <div style="font-size:22px;font-weight:900;">{{ bots_24h or 0 }}</div>
+      </div>
+      <div style="flex:1 1 180px;">
+        <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">24h 디바이스</div>
+        <div style="font-size:22px;font-weight:900;">
+          PC {{ desktops_24h or 0 }} / 모바일 {{ mobiles_24h or 0 }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+      <h2 style="margin:0;">내 사이트 신청 리스트</h2>
+      <div class="muted" style="font-size:12px;">총 {{ consults|length }}건</div>
+    </div>
+    <div class="scroll-panel">
+      <table>
+        <thead>
+          <tr>
+            <th>일시</th>
+            <th>고객</th>
+            <th>전화</th>
+            <th>통신사</th>
+            <th>상품</th>
+            <th>구성/속도</th>
+            <th>상태 / 메모</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in consults %}
+            <tr>
+              <td>{{ r.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+              <td>{{ r.customer_name or "-" }}</td>
+              <td>{{ r.customer_phone or "-" }}</td>
+              <td class="muted">{{ r.telcos or "-" }}</td>
+              <td class="muted">{{ r.products or "-" }}</td>
+              <td class="muted">{{ (r.bundle or "-") ~ " / " ~ (r.speed or "-") }}</td>
+              <td class="muted">
+                {% if r.status_obj %}
+                  <b>{{ r.status_obj.status }}</b>
+                  {% if r.status_obj.memo %}<br>{{ r.status_obj.memo }}{% endif %}
+                {% else %}
+                  신규
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2 style="margin:0 0 8px 0;">최근 방문 로그 (24시간)</h2>
+    <div class="muted" style="font-size:12px;margin-bottom:8px;">IP / 봇 여부 / 디바이스 / 경로 기준으로 간단히 확인할 수 있습니다.</div>
+    <div class="scroll-panel">
+      <table>
+        <thead>
+          <tr>
+            <th>일시</th>
+            <th>IP</th>
+            <th>유형</th>
+            <th>디바이스</th>
+            <th>경로</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in recent_visits %}
+            <tr>
+              <td>{{ v.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+              <td class="muted">{{ v.ip or "-" }}</td>
+              <td>
+                {% if v.is_bot %}
+                  <span class="muted">봇</span>
+                {% else %}
+                  <b>유저</b>
+                {% endif %}
+              </td>
+              <td class="muted">
+                {% if v.is_mobile %}모바일{% else %}PC{% endif %}
+              </td>
+              <td class="muted">{{ v.path }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

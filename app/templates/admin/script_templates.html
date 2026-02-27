@@ -1,0 +1,106 @@
+{% extends "admin/base.html" %}
+{% block content %}
+  <form method="post" action="{{ url_for('routes.admin_script_templates') }}">
+    <div class="card" style="margin-top:16px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <h2 style="margin:0 0 4px 0;">상담 스크립트 템플릿</h2>
+        <span class="muted" style="font-size:11px;">
+          ✏️ 아래에서 내용을 수정 후 <button type="submit" style="border:none;background:none;color:#0f766e;font-weight:700;cursor:pointer;padding:0;">저장(💾)</button> 하시면 됩니다.
+        </span>
+      </div>
+      <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
+        아래 스크립트는 모손라이프 기준 상담 품질 표준안을 예시로 정리한 것입니다. 상황에 맞게 응용하되, 핵심 흐름은 유지해 주세요.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="font-size:13px;line-height:1.7;background:#0f172a;border-radius:14px;padding:12px 14px;color:#e2e8f0;max-height:260px;overflow-y:auto;">
+          <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">상단 미리보기 (스크롤 가능)</div>
+          {% for block in script_body.split('\n\n') %}
+            <p style="margin:0 0 10px 0;white-space:pre-line;">{{ block }}</p>
+          {% endfor %}
+        </div>
+        <div>
+          <label class="muted" style="font-size:11px;display:block;margin-bottom:4px;">스크립트 편집 (아래에서 작성하면 위에 길게 출력됩니다)</label>
+          <textarea name="script_body"
+                    rows="14"
+                    style="width:100%;font-size:13px;line-height:1.6;padding:10px 12px;border-radius:10px;border:1px solid #e2e8f0;resize:vertical;">{{ script_body }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <h2 style="margin:0 0 4px 0;">FAQ 템플릿</h2>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button type="button"
+                  onclick="addFaqRow()"
+                  class="btn btn-xs"
+                  style="font-size:11px;display:inline-flex;align-items:center;gap:4px;">
+            <span>항목 추가</span><span>➕</span>
+          </button>
+          <span class="muted" style="font-size:11px;">각 질문/답변을 직접 수정·추가한 뒤 💾 버튼으로 저장하세요.</span>
+        </div>
+      </div>
+      <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
+        자주 나오는 질문/답변을 표준화해서, 상담 품질 편차를 줄일 수 있습니다.
+      </p>
+      <div class="scroll-panel">
+        <table>
+          <thead>
+            <tr>
+              <th>질문</th>
+              <th>표준 답변 예시</th>
+            </tr>
+          </thead>
+          <tbody id="faq-body">
+            {% for item in faqs %}
+              <tr>
+                <td style="width:35%;vertical-align:top;">
+                  <textarea name="faq_q_{{ loop.index0 }}"
+                            rows="2"
+                            style="width:100%;font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid #e2e8f0;resize:vertical;">{{ item.q }}</textarea>
+                </td>
+                <td style="vertical-align:top;">
+                  <textarea name="faq_a_{{ loop.index0 }}"
+                            rows="3"
+                            style="width:100%;font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid #e2e8f0;resize:vertical;">{{ item.a }}</textarea>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:12px;text-align:right;">
+        <button type="submit"
+                class="btn btn-sm"
+                style="font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:6px;">
+          <span>전체 저장</span> <span>💾</span>
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <script>
+    function addFaqRow() {
+      const tbody = document.getElementById('faq-body');
+      if (!tbody) return;
+      const idx = tbody.querySelectorAll('tr').length;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="width:35%;vertical-align:top;">
+          <textarea name="faq_q_${idx}"
+                    rows="2"
+                    style="width:100%;font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid #e2e8f0;resize:vertical;"></textarea>
+        </td>
+        <td style="vertical-align:top;">
+          <textarea name="faq_a_${idx}"
+                    rows="3"
+                    style="width:100%;font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid #e2e8f0;resize:vertical;"></textarea>
+        </td>
+      `;
+      tbody.appendChild(tr);
+      tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  </script>
+{% endblock %}
+

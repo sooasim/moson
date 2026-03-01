@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import os
+import io
 import secrets
 import json
 from datetime import datetime, timedelta
-from flask import Blueprint, current_app, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Blueprint, current_app, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from .extensions import db
@@ -780,6 +781,28 @@ def admin_policy_import():
     else:
         flash(message, "error")
     return redirect(url_for("routes.admin_policy"))
+
+
+@bp.get("/admin/policy/export-excel")
+def admin_policy_export_excel():
+    """정책표 DB → 엑셀 다운로드 (import와 동일 열 구조). 마스터만."""
+    if get_tenant():
+        return redirect(url_for("routes.admin_index"))
+    gate = _require_master()
+    if gate:
+        return gate
+    rows = PolicyRow.query.order_by(
+        PolicyRow.telco.asc().nullslast(), PolicyRow.id.asc()
+    ).all()
+    from .policy_export import build_policy_xlsx
+    xlsx_bytes = build_policy_xlsx(rows)
+    filename = f"moson_policy_export_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    return send_file(
+        io.BytesIO(xlsx_bytes),
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @bp.get("/admin/policy")

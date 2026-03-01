@@ -12,12 +12,21 @@
   @media (min-width: 1200px) {
     .policy-page .scroll-panel { max-height: min(72vh, 700px); }
   }
+  /* 항목별 직관 색상: 경품가이드(붉은색), 상품권(초록), 현금VAT포함(주황), 상품권+현금(파랑), 현금(노랑/골드) */
+  .policy-page .policy-col-guide { color: #c0392b !important; font-weight: 600; }
+  .policy-page .policy-col-voucher { color: #27ae60 !important; font-weight: 600; }
+  .policy-page .policy-col-cash-vat { color: #e67e22 !important; font-weight: 600; }
+  .policy-page .policy-col-total { color: #2980b9 !important; font-weight: 600; }
+  .policy-page .policy-col-cash { color: #b8860b !important; font-weight: 700; }
 </style>
 <div class="policy-page">
 {% if not is_reseller and admin_role == 'master' %}
-<form method="post" action="{{ url_for('routes.admin_policy_import') }}" style="margin-bottom:12px;">
-  <button type="submit" class="btn btn-primary">📥 엑셀에서 불러오기 (moson_policy.xlsx)</button>
-</form>
+<div style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
+  <form method="post" action="{{ url_for('routes.admin_policy_import') }}">
+    <button type="submit" class="btn btn-primary">📥 엑셀에서 불러오기 (moson_policy.xlsx)</button>
+  </form>
+  <a href="{{ url_for('routes.admin_policy_export_excel') }}" class="btn btn-secondary" download>📤 정책표 → 엑셀 저장 (다운로드)</a>
+</div>
 {% endif %}
 <form method="post" action="{{ url_for('routes.admin_policy_bulk_update') }}">
 <div class="card">
@@ -64,14 +73,14 @@
             <th style="min-width:120px;">총액결합<br>모바일 65K↑</th>
             <th style="min-width:110px;">프리미엄가족</th>
             <th style="min-width:110px;">프리미엄싱글</th>
-            <th style="min-width:220px;">경품가이드</th>
-            <th style="min-width:90px;">상품권</th>
+            <th class="policy-col-guide" style="min-width:220px;">경품가이드</th>
+            <th class="policy-col-voucher" style="min-width:90px;">상품권</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
             <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th style="min-width:100px;">현금</th>
-            <th style="min-width:120px;">현금<br>VAT포함</th>
-            <th style="min-width:140px;">최종수수료<br>(상품권+현금 합산)</th>
+            <th class="policy-col-cash" style="min-width:100px;">현금</th>
+            <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
+            <th class="policy-col-total" style="min-width:140px;">최종수수료<br>(상품권+현금 합산)</th>
             {% endif %}
             <th style="width:60px;">저장</th>
           </tr>
@@ -91,10 +100,10 @@
             <td>{{ r.promo3 or '-' }}</td>
             <td>{{ r.promo4 or '-' }}</td>
 
-            <td>
+            <td class="policy-col-guide">
                 <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:100%; max-width:220px;">
             </td>
-            <td class="text-right">
+            <td class="policy-col-voucher text-right">
               {% if r.voucher is not none %}
                 {{ "{:,}".format(r.voucher) }}원
               {% else %}
@@ -113,17 +122,17 @@
               {% endif %}
             </td>
             {% if not is_reseller %}
-            <td class="text-right">
+            <td class="policy-col-cash text-right">
               {% if r.cash is not none %}
                 {{ "{:,}".format(r.cash) }}원
               {% else %}
                 -
               {% endif %}
             </td>
-            <td>
+            <td class="policy-col-cash-vat">
                 <input type="text" name="cash_vat_{{ r.id }}" value="{{ r.cash_vat if r.cash_vat is not none else '' }}" style="max-width:120px;">
             </td>
-            <td class="text-right">
+            <td class="policy-col-total text-right">
               {% if r.total_fee is not none %}
                 {{ "{:,}".format(r.total_fee) }}원
               {% else %}
@@ -160,14 +169,14 @@
             <th style="min-width:90px;">참쉬운</th>
             <th style="min-width:90px;">투게더</th>
             <th style="min-width:110px;">인터넷끼리</th>
-            <th style="min-width:220px;">경품가이드</th>
+            <th class="policy-col-guide" style="min-width:220px;">경품가이드</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
-            <th style="min-width:90px;">상품권</th>
+            <th class="policy-col-voucher" style="min-width:90px;">상품권</th>
             <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th style="min-width:100px;">현금</th>
-            <th style="min-width:120px;">현금<br>VAT포함</th>
-            <th style="min-width:140px;">상품권+현금<br>VAT포함</th>
+            <th class="policy-col-cash" style="min-width:100px;">현금</th>
+            <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
+            <th class="policy-col-total" style="min-width:140px;">상품권+현금<br>VAT포함</th>
             {% endif %}
             <th style="width:60px;">저장</th>
           </tr>
@@ -186,13 +195,13 @@
             <td>{{ r.promo2 or '-' }}</td>
             <td>{{ r.promo3 or '-' }}</td>
 
-            <td>
+            <td class="policy-col-guide">
                 <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:100%; max-width:220px;">
             </td>
             <td class="text-right">
               {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
             </td>
-            <td>
+            <td class="policy-col-voucher">
               {% if r.voucher is not none %}
                 {{ "{:,}".format(r.voucher) }}원
               {% else %}
@@ -208,17 +217,17 @@
               {% endif %}
             </td>
             {% if not is_reseller %}
-            <td class="text-right">
+            <td class="policy-col-cash text-right">
               {% if r.cash is not none %}
                 {{ "{:,}".format(r.cash) }}원
               {% else %}
                 -
               {% endif %}
             </td>
-            <td>
+            <td class="policy-col-cash-vat">
                 <input type="text" name="cash_vat_{{ r.id }}" value="{{ r.cash_vat if r.cash_vat is not none else '' }}" style="max-width:120px;">
             </td>
-            <td class="text-right">
+            <td class="policy-col-total text-right">
               {% if r.total_fee is not none %}
                 {{ "{:,}".format(r.total_fee) }}원
               {% else %}
@@ -258,12 +267,12 @@
             <th style="min-width:90px;">2년 미만</th>
             <th style="min-width:90px;">3년 미만</th>
             <th style="min-width:90px;">3년 이상</th>
-            <th style="min-width:220px;">경품가이드</th>
+            <th class="policy-col-guide" style="min-width:220px;">경품가이드</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
             <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th style="min-width:100px;">현금</th>
-            <th style="min-width:120px;">현금<br>VAT포함</th>
+            <th class="policy-col-cash" style="min-width:100px;">현금</th>
+            <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
             {% endif %}
             <th style="width:60px;">저장</th>
           </tr>
@@ -284,7 +293,7 @@
             <td>-</td>
             <td>-</td>
 
-            <td>
+            <td class="policy-col-guide">
                 <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:100%; max-width:220px;">
             </td>
             <td class="text-right">
@@ -299,14 +308,14 @@
               {% endif %}
             </td>
             {% if not is_reseller %}
-            <td class="text-right">
+            <td class="policy-col-cash text-right">
               {% if r.cash is not none %}
                 {{ "{:,}".format(r.cash) }}원
               {% else %}
                 -
               {% endif %}
             </td>
-            <td>
+            <td class="policy-col-cash-vat">
                 <input type="text" name="cash_vat_{{ r.id }}" value="{{ r.cash_vat if r.cash_vat is not none else '' }}" style="max-width:120px;">
             </td>
             {% endif %}
@@ -342,12 +351,12 @@
             <th style="min-width:90px;">2년 미만</th>
             <th style="min-width:90px;">3년 미만</th>
             <th style="min-width:90px;">3년 이상</th>
-            <th style="min-width:220px;">경품가이드</th>
+            <th class="policy-col-guide" style="min-width:220px;">경품가이드</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
             <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th style="min-width:100px;">현금</th>
-            <th style="min-width:120px;">현금<br>VAT별도</th>
+            <th class="policy-col-cash" style="min-width:100px;">현금</th>
+            <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT별도</th>
             {% endif %}
             <th style="width:60px;">저장</th>
           </tr>
@@ -368,7 +377,7 @@
             <td>-</td>
             <td>-</td>
 
-            <td>
+            <td class="policy-col-guide">
                 <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:100%; max-width:220px;">
             </td>
             <td class="text-right">
@@ -383,14 +392,14 @@
               {% endif %}
             </td>
             {% if not is_reseller %}
-            <td class="text-right">
+            <td class="policy-col-cash text-right">
               {% if r.cash is not none %}
                 {{ "{:,}".format(r.cash) }}원
               {% else %}
                 -
               {% endif %}
             </td>
-            <td>
+            <td class="policy-col-cash-vat">
                 <input type="text" name="cash_vat_{{ r.id }}" value="{{ r.cash_vat if r.cash_vat is not none else '' }}" style="max-width:120px;">
             </td>
             {% endif %}
@@ -415,10 +424,10 @@
             <th style="min-width:120px;">통신사</th>
             <th style="min-width:200px;">상품명</th>
             <th style="min-width:80px;">속도</th>
-            <th style="min-width:260px;">경품가이드</th>
+            <th class="policy-col-guide" style="min-width:260px;">경품가이드</th>
             <th style="min-width:140px;">최종 경품금액<br>(원)</th>
-            <th style="min-width:130px;">현금</th>
-            <th style="min-width:150px;">현금 VAT포함</th>
+            <th class="policy-col-cash" style="min-width:130px;">현금</th>
+            <th class="policy-col-cash-vat" style="min-width:150px;">현금 VAT포함</th>
             <th style="width:70px;">저장</th>
           </tr>
         </thead>
@@ -430,14 +439,14 @@
             <td>{{ r.product_name or '-' }}</td>
             <td>{{ r.speed or '-' }}</td>
 
-            <td>
+            <td class="policy-col-guide">
                 <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:100%; max-width:260px;">
             </td>
             <td class="text-right">
               {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
             </td>
             {# 현금 = 현금 VAT포함 - 최종 경품금액 #}
-            <td class="text-right">
+            <td class="policy-col-cash text-right">
               {% if r.cash is not none %}
                 {{ "{:,}".format(r.cash) }}원
               {% else %}
@@ -445,7 +454,7 @@
               {% endif %}
             </td>
 
-            <td>
+            <td class="policy-col-cash-vat">
                 <input type="text" name="cash_vat_{{ r.id }}" value="{{ r.cash_vat if r.cash_vat is not none else '' }}" style="max-width:120px;">
             </td>
             <td style="text-align:center;">

@@ -783,6 +783,31 @@ def admin_policy_import():
     return redirect(url_for("routes.admin_policy"))
 
 
+@bp.post("/admin/policy/import-upload")
+def admin_policy_import_upload():
+    """업로드한 엑셀 파일로 정책 데이터 불러오기. 마스터만."""
+    if get_tenant():
+        return redirect(url_for("routes.admin_index"))
+    gate = _require_master()
+    if gate:
+        return gate
+    f = request.files.get("policy_excel")
+    if not f or not f.filename or not f.filename.lower().endswith((".xlsx", ".xls")):
+        flash("엑셀 파일(.xlsx)을 선택해 주세요.", "error")
+        return redirect(url_for("routes.admin_policy"))
+    buf = io.BytesIO(f.read())
+    if buf.getbuffer().nbytes == 0:
+        flash("파일이 비어 있습니다.", "error")
+        return redirect(url_for("routes.admin_policy"))
+    from .policy_import import run_policy_import
+    success, message, _ = run_policy_import(current_app, xlsx_file=buf)
+    if success:
+        flash(message, "success")
+    else:
+        flash(message, "error")
+    return redirect(url_for("routes.admin_policy"))
+
+
 @bp.get("/admin/policy/export-excel")
 def admin_policy_export_excel():
     """정책표 DB → 엑셀 다운로드 (import와 동일 열 구조). 마스터만."""
@@ -834,8 +859,8 @@ def admin_policy():
                     rows = PolicyRow.query.order_by(
                         PolicyRow.telco.asc().nullslast(), PolicyRow.id.asc()
                     ).all()
-            except Exception:
-                pass
+            except Exception as e:
+                flash(f"자동 불러오기 실패: {e}", "error")
 
     # 통신사 그룹별(KT 도매 / LG 도매 / SKT 도매 / SKB 도매)로 박스 분리
     groups = {

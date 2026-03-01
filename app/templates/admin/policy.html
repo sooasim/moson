@@ -2,6 +2,8 @@
 {% block title %}정책표 - {{ super() }}{% endblock %}
 
 {% block content %}
+{% set is_reseller = tenant and session.get('user_kind') == 'reseller' %}
+{% set admin_role = session.get('admin_role') %}
 <style>
   /* 정책표 페이지: PC 화면 넓이에 가득 차게 반응형 */
   .policy-page .card { width: 100%; max-width: 100%; }
@@ -21,11 +23,18 @@
 </style>
 <div class="policy-page">
 {% if not is_reseller and admin_role == 'master' %}
-<div style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
-  <form method="post" action="{{ url_for('routes.admin_policy_import') }}">
-    <button type="submit" class="btn btn-primary">📥 엑셀에서 불러오기 (moson_policy.xlsx)</button>
-  </form>
-  <a href="{{ url_for('routes.admin_policy_export_excel') }}" class="btn btn-secondary" download>📤 정책표 → 엑셀 저장 (다운로드)</a>
+<div style="margin-bottom:16px;">
+  <p class="muted" style="font-size:12px; margin-bottom:8px;">서버에 엑셀이 없으면 정책 데이터가 비어 있습니다. 아래에서 <strong>엑셀 파일을 업로드</strong>한 뒤 불러오기를 누르세요.</p>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <form method="post" action="{{ url_for('routes.admin_policy_import_upload') }}" enctype="multipart/form-data" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <input type="file" name="policy_excel" accept=".xlsx,.xls" required style="max-width:260px; padding:6px;">
+      <button type="submit" class="btn btn-primary">📤 업로드한 엑셀로 불러오기</button>
+    </form>
+    <form method="post" action="{{ url_for('routes.admin_policy_import') }}" style="display:inline;">
+      <button type="submit" class="btn btn-secondary">📥 서버 파일 불러오기 (moson_policy.xlsx)</button>
+    </form>
+    <a href="{{ url_for('routes.admin_policy_export_excel') }}" class="btn btn-secondary" download>📤 정책표 → 엑셀 다운로드</a>
+  </div>
 </div>
 {% endif %}
 <form method="post" action="{{ url_for('routes.admin_policy_bulk_update') }}">
@@ -43,8 +52,6 @@
 </div>
 
 {% set group_order = ["KT 도매", "LG 도매", "SKT 도매", "SKB 도매", "기타"] %}
-{% set is_reseller = tenant and session.get('user_kind') == 'reseller' %}
-{% set admin_role = session.get('admin_role') %}
 
 {% for g in group_order %}
   {% set g_rows = groups.get(g) if groups else [] %}
@@ -476,13 +483,8 @@
   <div class="card" style="margin-top:16px;">
     <div class="card-body">
       <p class="muted" style="text-align:center; padding:20px 0;">
-        아직 정책 데이터가 없습니다. moson_policy.xlsx에서 불러오거나 위의 <strong>엑셀에서 불러오기</strong> 버튼을 사용하세요.
+        아직 정책 데이터가 없습니다. 위에서 <strong>엑셀 파일을 선택 후 「업로드한 엑셀로 불러오기」</strong>를 눌러 주세요. (배포 서버에는 엑셀 파일이 없을 수 있습니다.)
       </p>
-      {% if not is_reseller and admin_role == 'master' %}
-      <form method="post" action="{{ url_for('routes.admin_policy_import') }}" style="text-align:center;">
-        <button type="submit" class="btn btn-primary">📥 엑셀에서 불러오기</button>
-      </form>
-      {% endif %}
     </div>
   </div>
 {% endif %}

@@ -30,18 +30,14 @@ def _max_number_in_text(text):
     return max(parsed) if parsed else 0
 
 
-def run_policy_import(app, xlsx_path=None):
+def run_policy_import(app, xlsx_path=None, xlsx_file=None):
     """
-    moson_policy.xlsx를 읽어 PolicyRow 테이블에 적재.
+    엑셀을 읽어 PolicyRow 테이블에 적재.
     app: Flask app (app_context 밖에서 호출 시 내부에서 push 함).
-    xlsx_path: None이면 app.root_path/data/moson_policy.xlsx 사용.
+    xlsx_file: 파일-like 객체(BytesIO 등)가 있으면 이걸 사용 (업로드용).
+    xlsx_path: xlsx_file이 없을 때 사용. None이면 app.root_path/data/moson_policy.xlsx.
     Returns: (success: bool, message: str, count: int)
     """
-    if xlsx_path is None:
-        xlsx_path = os.path.join(app.root_path, "data", "moson_policy.xlsx")
-    if not os.path.isfile(xlsx_path):
-        return False, f"엑셀 파일이 없습니다: {xlsx_path}", 0
-
     try:
         import pandas as pd
     except ImportError:
@@ -50,9 +46,18 @@ def run_policy_import(app, xlsx_path=None):
     from .extensions import db
     from .models import PolicyRow
 
+    if xlsx_file is not None:
+        source = xlsx_file
+    else:
+        if xlsx_path is None:
+            xlsx_path = os.path.join(app.root_path, "data", "moson_policy.xlsx")
+        if not os.path.isfile(xlsx_path):
+            return False, f"엑셀 파일이 없습니다. 서버에 moson_policy.xlsx를 두거나, 아래에서 엑셀 파일을 업로드해 주세요.", 0
+        source = xlsx_path
+
     with app.app_context():
         try:
-            df = pd.read_excel(xlsx_path, sheet_name=0, header=1)
+            df = pd.read_excel(source, sheet_name=0, header=1)
         except Exception as e:
             return False, f"엑셀 읽기 실패: {e}", 0
 

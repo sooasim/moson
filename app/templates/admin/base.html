@@ -63,6 +63,7 @@
         <div class="nav-main">
           <a href="{{ url_for('routes.admin_index') }}" class="{% if request.path == '/admin' %}active{% endif %}">대시보드</a>
           <a href="{{ url_for('routes.admin_index') }}#list" class="">신청서 리스트</a>
+          <a href="{{ url_for('routes.admin_policy') }}" class="{% if request.path.startswith('/admin/policy') %}active{% endif %}">정책표</a>
           <a href="{{ url_for('routes.admin_script_templates') }}" class="{% if request.path.startswith('/admin/scripts') %}active{% endif %}">상담 스크립트/FAQ</a>
           <a href="{{ url_for('routes.admin_reseller_profile') }}" class="{% if request.path.startswith('/admin/profile') %}active{% endif %}">내 정보</a>
         </div>

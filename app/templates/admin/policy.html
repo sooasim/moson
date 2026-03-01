@@ -20,6 +20,8 @@
   .policy-page .policy-col-cash-vat { color: #e67e22 !important; font-weight: 600; }
   .policy-page .policy-col-total { color: #2980b9 !important; font-weight: 600; }
   .policy-page .policy-col-cash { color: #b8860b !important; font-weight: 700; }
+  /* 정책표 전용 아이콘 (CDN 없이 항상 표시) */
+  .policy-page .policy-icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; margin-right: 6px; fill: currentColor; }
 </style>
 <div class="policy-page">
 {% set has_any_data = groups and (groups["KT 도매"]|length > 0 or groups["LG 도매"]|length > 0 or groups["SKT 도매"]|length > 0 or groups["SKB 도매"]|length > 0 or groups["기타"]|length > 0) %}
@@ -40,16 +42,16 @@
 
 {% if not is_reseller %}
 <div class="card" style="margin-bottom:16px; padding:14px;">
-  <p style="margin:0 0 10px 0; font-size:13px; font-weight:700;"><i class="fas fa-file-excel" style="color:var(--accent); margin-right:6px;"></i>엑셀 불러오기 / 저장</p>
+  <p style="margin:0 0 10px 0; font-size:13px; font-weight:700;"><svg class="policy-icon" style="color:var(--accent);" viewBox="0 0 384 512" aria-hidden="true"><path d="M224 136V0H24C10.7 0 0 10.7 0 24v464c0 13.3 10.7 24 24 24h336c13.3 0 24-10.7 24-24V160H248c-13.2 0-24-10.8-24-24zm64 236c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12v8zm0-64c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12v8zm0-72v8c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12zm96-114.1v6.1H256V0h6.1c6.4 0 12.5 2.5 17 7l97.9 98c4.5 4.5 7 10.6 7 16.9z"/></svg>엑셀 불러오기 / 저장</p>
   <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
     <form method="post" action="{{ url_for('routes.admin_policy_import_upload') }}" enctype="multipart/form-data" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
       <input type="file" name="policy_excel" accept=".xlsx,.xls" required style="max-width:280px; padding:8px; font-size:13px;">
-      <button type="submit" class="btn btn-primary"><i class="fas fa-upload" style="margin-right:6px;"></i>업로드한 엑셀로 불러오기</button>
+      <button type="submit" class="btn btn-primary"><svg class="policy-icon" viewBox="0 0 576 512" aria-hidden="true"><path d="M288 0l-96 96v160h192V96L288 0zm-32 256v192h64V256h-64zM0 288v96c0 35.3 28.7 64 64 64h64V256H64c-35.3 0-64 28.7-64 64zm512-32h-64v192h64c35.3 0 64-28.7 64-64v-96c0-35.3-28.7-64-64-64zM384 256H192v192h192V256z"/></svg>업로드한 엑셀로 불러오기</button>
     </form>
     <form method="post" action="{{ url_for('routes.admin_policy_import') }}" style="display:inline;">
-      <button type="submit" class="btn btn-secondary"><i class="fas fa-download" style="margin-right:6px;"></i>서버 파일 불러오기</button>
+      <button type="submit" class="btn btn-secondary"><svg class="policy-icon" viewBox="0 0 576 512" aria-hidden="true"><path d="M0 64C0 28.7 28.7 0 64 0h160v128c0 17.7 14.3 32 32 32h128v144H176c-35.3 0-64 28.7-64 64v48H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0l128 128zM352 432c0 26.5 21.5 48 48 48s48-21.5 48-48v-41.7c0-20.5-11.5-39.3-28.4-48.4l-42.2-28.1c-16.9-11.2-26.6-30.2-26.6-50.2V288h64v12.6c0 8.2 4.5 15.7 11.8 19.5l42.2 28.1c17.7 11.8 27.8 31.3 27.8 52.2V432c0 61.9-50.1 112-112 112s-112-50.1-112-112v-41.7c0-20.5 11.5-39.3 28.4-48.4l42.2-28.1c16.9-11.2 26.6-30.2 26.6-50.2V288h-64v12.6c0 8.2-4.5 15.7-11.8 19.5l-42.2 28.1c-17.7 11.8-27.8 31.3-27.8 52.2V432z"/></svg>서버 파일 불러오기</button>
     </form>
-    <a href="{{ url_for('routes.admin_policy_export_excel') }}" class="btn btn-secondary" download><i class="fas fa-file-download" style="margin-right:6px;"></i>정책표 엑셀 다운로드</a>
+    <a href="{{ url_for('routes.admin_policy_export_excel') }}" class="btn btn-secondary" download><svg class="policy-icon" viewBox="0 0 384 512" aria-hidden="true"><path d="M369.9 97.9L286 14C277 5 264.8-.1 252.1-.1H48C21.5 0 0 21.5 0 48v416c0 26.5 21.5 48 48 48h288c26.5 0 48-21.5 48-48V131.9c0-12.7-5.1-25-14.1-34zM332.1 128H256V51.9l76.1 76.1zM48 464V48h160v104c0 13.3 10.7 24 24 24h104v288H48zm148-176c0 6.6-5.4 12-12 12h-72c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h72c6.6 0 12 5.4 12 12v8zm0 64c0 6.6-5.4 12-12 12h-72c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h72c6.6 0 12 5.4 12 12v8zm64-128c0 6.6-5.4 12-12 12h-72c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h72c6.6 0 12 5.4 12 12v8zm64 64c0 6.6-5.4 12-12 12h-72c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h72c6.6 0 12 5.4 12 12v8z"/></svg>정책표 엑셀 다운로드</a>
   </div>
   <p class="muted" style="margin:8px 0 0 0; font-size:11px;">불러오기는 마스터 권한에서만 적용됩니다. 상담사는 표만 열람 가능합니다.</p>
 </div>
@@ -167,7 +169,7 @@
             <td style="text-align:center;">
                 {% if not is_reseller and admin_role == 'master' %}
                 <button type="submit" class="btn btn-xs" title="전체 저장">
-                  <i class="fas fa-save"></i>
+                  <svg class="policy-icon" viewBox="0 0 448 512" style="width:14px;height:14px;margin:0;" aria-hidden="true"><path d="M433.9 129.1l-83.9-83.9c-9.4-9.4-22.9-14.6-36.6-14.6H64C28.7 30.6 0 59.3 0 94.6v322.8c0 35.3 28.7 64 64 64h320c35.3 0 64-28.7 64-64V165.7c0-13.7-5.2-27.2-14.1-36.6zM288 414.6V288h64v126.6h-64zm-96 0V288h64v126.6h-64zm-64-158.6V94.6h96v32c0 17.7 14.3 32 32 32h64v45.4H128zm288 158.6H320V256h-64v158.6H128V94.6h18.6l82 82H224v32c0 17.7 14.3 32 32 32h96v22.6z"/></svg>
                 </button>
                 {% endif %}
             </td>
@@ -262,7 +264,7 @@
             <td style="text-align:center;">
                 {% if not is_reseller and admin_role == 'master' %}
                 <button type="submit" class="btn btn-xs" title="전체 저장">
-                  <i class="fas fa-save"></i>
+                  <svg class="policy-icon" viewBox="0 0 448 512" style="width:14px;height:14px;margin:0;" aria-hidden="true"><path d="M433.9 129.1l-83.9-83.9c-9.4-9.4-22.9-14.6-36.6-14.6H64C28.7 30.6 0 59.3 0 94.6v322.8c0 35.3 28.7 64 64 64h320c35.3 0 64-28.7 64-64V165.7c0-13.7-5.2-27.2-14.1-36.6zM288 414.6V288h64v126.6h-64zm-96 0V288h64v126.6h-64zm-64-158.6V94.6h96v32c0 17.7 14.3 32 32 32h64v45.4H128zm288 158.6H320V256h-64v158.6H128V94.6h18.6l82 82H224v32c0 17.7 14.3 32 32 32h96v22.6z"/></svg>
                 </button>
                 {% endif %}
             </td>
@@ -346,7 +348,7 @@
             <td style="text-align:center;">
                 {% if not is_reseller and admin_role == 'master' %}
                 <button type="submit" class="btn btn-xs" title="전체 저장">
-                  <i class="fas fa-save"></i>
+                  <svg class="policy-icon" viewBox="0 0 448 512" style="width:14px;height:14px;margin:0;" aria-hidden="true"><path d="M433.9 129.1l-83.9-83.9c-9.4-9.4-22.9-14.6-36.6-14.6H64C28.7 30.6 0 59.3 0 94.6v322.8c0 35.3 28.7 64 64 64h320c35.3 0 64-28.7 64-64V165.7c0-13.7-5.2-27.2-14.1-36.6zM288 414.6V288h64v126.6h-64zm-96 0V288h64v126.6h-64zm-64-158.6V94.6h96v32c0 17.7 14.3 32 32 32h64v45.4H128zm288 158.6H320V256h-64v158.6H128V94.6h18.6l82 82H224v32c0 17.7 14.3 32 32 32h96v22.6z"/></svg>
                 </button>
                 {% endif %}
             </td>
@@ -430,7 +432,7 @@
             <td style="text-align:center;">
                 {% if not is_reseller and admin_role == 'master' %}
                 <button type="submit" class="btn btn-xs" title="전체 저장">
-                  <i class="fas fa-save"></i>
+                  <svg class="policy-icon" viewBox="0 0 448 512" style="width:14px;height:14px;margin:0;" aria-hidden="true"><path d="M433.9 129.1l-83.9-83.9c-9.4-9.4-22.9-14.6-36.6-14.6H64C28.7 30.6 0 59.3 0 94.6v322.8c0 35.3 28.7 64 64 64h320c35.3 0 64-28.7 64-64V165.7c0-13.7-5.2-27.2-14.1-36.6zM288 414.6V288h64v126.6h-64zm-96 0V288h64v126.6h-64zm-64-158.6V94.6h96v32c0 17.7 14.3 32 32 32h64v45.4H128zm288 158.6H320V256h-64v158.6H128V94.6h18.6l82 82H224v32c0 17.7 14.3 32 32 32h96v22.6z"/></svg>
                 </button>
                 {% endif %}
             </td>
@@ -483,7 +485,7 @@
             </td>
             <td style="text-align:center;">
                 <button type="submit" class="btn btn-xs" title="전체 저장">
-                  <i class="fas fa-save"></i>
+                  <svg class="policy-icon" viewBox="0 0 448 512" style="width:14px;height:14px;margin:0;" aria-hidden="true"><path d="M433.9 129.1l-83.9-83.9c-9.4-9.4-22.9-14.6-36.6-14.6H64C28.7 30.6 0 59.3 0 94.6v322.8c0 35.3 28.7 64 64 64h320c35.3 0 64-28.7 64-64V165.7c0-13.7-5.2-27.2-14.1-36.6zM288 414.6V288h64v126.6h-64zm-96 0V288h64v126.6h-64zm-64-158.6V94.6h96v32c0 17.7 14.3 32 32 32h64v45.4H128zm288 158.6H320V256h-64v158.6H128V94.6h18.6l82 82H224v32c0 17.7 14.3 32 32 32h96v22.6z"/></svg>
                 </button>
             </td>
           </tr>

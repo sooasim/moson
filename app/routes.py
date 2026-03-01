@@ -5,7 +5,7 @@ import io
 import secrets
 import json
 from datetime import datetime, timedelta
-from flask import Blueprint, current_app, render_template, request, redirect, url_for, session, flash, jsonify, send_file
+from flask import Blueprint, current_app, make_response, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from .extensions import db
@@ -785,28 +785,37 @@ def admin_policy_import():
     return redirect(url_for("routes.admin_policy"))
 
 
+@bp.get("/admin/policy/import-upload")
+def admin_policy_import_upload_get():
+    """GET으로 접근 시 정책표 페이지로 이동 (업로드는 폼 POST 사용)."""
+    return redirect(url_for("routes.admin_policy"))
+
+
 @bp.post("/admin/policy/import-upload")
 def admin_policy_import_upload():
     """업로드한 엑셀 파일로 정책 데이터 불러오기. 마스터만."""
-    if get_tenant():
-        return redirect(url_for("routes.admin_index"))
-    gate = _require_master()
-    if gate:
-        return gate
-    f = request.files.get("policy_excel")
-    if not f or not f.filename or not f.filename.lower().endswith((".xlsx", ".xls")):
-        flash("엑셀 파일(.xlsx)을 선택해 주세요.", "error")
-        return redirect(url_for("routes.admin_policy"))
-    buf = io.BytesIO(f.read())
-    if buf.getbuffer().nbytes == 0:
-        flash("파일이 비어 있습니다.", "error")
-        return redirect(url_for("routes.admin_policy"))
-    from .policy_import import run_policy_import
-    success, message, _ = run_policy_import(current_app, xlsx_file=buf)
-    if success:
-        flash(message, "success")
-    else:
-        flash(message, "error")
+    try:
+        if get_tenant():
+            return redirect(url_for("routes.admin_index"))
+        gate = _require_master()
+        if gate:
+            return gate
+        f = request.files.get("policy_excel")
+        if not f or not f.filename or not f.filename.lower().endswith((".xlsx", ".xls")):
+            flash("엑셀 파일(.xlsx)을 선택해 주세요.", "error")
+            return redirect(url_for("routes.admin_policy"))
+        buf = io.BytesIO(f.read())
+        if buf.getbuffer().nbytes == 0:
+            flash("파일이 비어 있습니다.", "error")
+            return redirect(url_for("routes.admin_policy"))
+        from .policy_import import run_policy_import
+        success, message, _ = run_policy_import(current_app, xlsx_file=buf)
+        if success:
+            flash(message, "success")
+        else:
+            flash(message, "error")
+    except Exception as e:
+        flash(f"업로드 중 오류가 발생했습니다: {e}", "error")
     return redirect(url_for("routes.admin_policy"))
 
 
@@ -885,11 +894,13 @@ def admin_policy():
             key = "SKT 도매"
         groups.setdefault(key, []).append(r)
 
-    return render_template(
+    resp = make_response(render_template(
         "admin/policy.html",
         title="정책표",
         groups=groups,
-    )
+    ))
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return resp
 
 
 @bp.post("/admin/policy/bulk")
@@ -927,29 +938,32 @@ def admin_policy_bulk_update():
                 continue
         return max(parsed) if parsed else 0
 
-    rows = PolicyRow.query.all()
-    for row in rows:
-        gid_key = f"gift_guide_{row.id}"
-        cash_key = f"cash_vat_{row.id}"
-        if gid_key not in request.form and cash_key not in request.form:
-            continue
+    try:
+        rows = PolicyRow.query.all()
+        for row in rows:
+            gid_key = f"gift_guide_{row.id}"
+            cash_key = f"cash_vat_{row.id}"
+            if gid_key not in request.form and cash_key not in request.form:
+                continue
 
-        guide_text = request.form.get(gid_key, row.gift_guide or "")
-        cash_vat_raw = request.form.get(cash_key, "" if row.cash_vat is None else str(row.cash_vat))
+            guide_text = request.form.get(gid_key, row.gift_guide or "")
+            cash_vat_raw = request.form.get(cash_key, "" if row.cash_vat is None else str(row.cash_vat))
 
-        cash_vat_val = _parse_int(cash_vat_raw)
-        final_gift = _max_number_in_text(guide_text)
-        cash_val = None
-        if cash_vat_val is not None:
-            cash_val = cash_vat_val - (final_gift * 10000)
+            cash_vat_val = _parse_int(cash_vat_raw)
+            final_gift = _max_number_in_text(guide_text)
+            cash_val = None
+            if cash_vat_val is not None:
+                cash_val = cash_vat_val - (final_gift * 10000)
 
-        row.gift_guide = guide_text
-        row.cash_vat = cash_vat_val
-        row.final_gift = final_gift
-        row.cash = cash_val
+            row.gift_guide = guide_text
+            row.cash_vat = cash_vat_val
+            row.final_gift = final_gift
+            row.cash = cash_val
 
-    db.session.commit()
-
+        db.session.commit()
+        flash("정책표가 저장되었습니다.", "success")
+    except Exception as e:
+        flash(f"저장 중 오류가 발생했습니다: {e}", "error")
     return redirect(url_for("routes.admin_policy"))
 
 

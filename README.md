@@ -10,8 +10,6 @@ copy .env.example .env
 python app.py
 ```
 
-- 메인 사이트: http://127.0.0.1:5000
-- 메인 어드민: http://127.0.0.1:5000/admin (기본: admin / admin1234)
 
 ## 2) 대리점(리셀러) 생성
 
@@ -25,16 +23,7 @@ python app.py
 
 ### 로컬에서 서브도메인 테스트 (둘 중 하나)
 
-- 방법 A) URL 파라미터로 강제 테넌트
-  - 예: `http://127.0.0.1:5000/?dealer=daelim01`
 
-- 방법 B) hosts 파일에 매핑 (권장)
-  - Windows: `C:\Windows\System32\drivers\etc\hosts`
-  - 아래처럼 추가
-    ```
-    127.0.0.1  daelim01.moson.life
-    ```
-  - 접속: `http://daelim01.moson.life:5000`
 
 ## 3) 대리점 어드민
 

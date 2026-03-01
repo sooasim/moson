@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """정책표 DB → 엑셀 내보내기 (import와 동일한 열 구조)."""
 import io
-from datetime import datetime
 
 from openpyxl import Workbook
 

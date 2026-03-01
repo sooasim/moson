@@ -161,12 +161,15 @@ def _policy_summary():
 def landing():
     ctx = _tenant_context()
     policy_summary = _policy_summary()
-    return render_template(
+    resp = make_response(render_template(
         "landing.html",
         partners_json=_partners_json(),
         policy_summary=policy_summary,
         **ctx,
-    )
+    ))
+    # 정책표 수정 후 메인에서도 최신 정책(최고가 등)이 보이도록 캐시 방지
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return resp
 
 
 @bp.get("/api/policy-quote")
@@ -859,20 +862,8 @@ def admin_policy():
         PolicyRow.telco.asc().nullslast(), PolicyRow.id.asc()
     ).all()
 
-    # 정책 데이터가 없고, 메인 마스터이며, 엑셀 파일이 있으면 자동으로 불러오기
-    if not rows and not tenant and session.get("admin_role") == "master":
-        xlsx_path = os.path.join(current_app.root_path, "data", "moson_policy.xlsx")
-        if os.path.isfile(xlsx_path):
-            try:
-                from .policy_import import run_policy_import
-                success, message, _ = run_policy_import(current_app, xlsx_path=xlsx_path)
-                if success:
-                    flash(message, "success")
-                    rows = PolicyRow.query.order_by(
-                        PolicyRow.telco.asc().nullslast(), PolicyRow.id.asc()
-                    ).all()
-            except Exception as e:
-                flash(f"자동 불러오기 실패: {e}", "error")
+    # 배포 환경에서는 자동 불러오기 하지 않음. 수정된 정책 데이터가 유지되도록 함.
+    # 데이터가 없으면 어드민에서 "업로드한 엑셀로 불러오기" 또는 "서버 파일 불러오기"로만 반영.
 
     # 통신사 그룹별(KT 도매 / LG 도매 / SKT 도매 / SKB 도매)로 박스 분리
     groups = {
@@ -962,10 +953,11 @@ def admin_policy_bulk_update():
             row.cash = cash_val
 
         db.session.commit()
-        flash("정책표가 저장되었습니다.", "success")
+        flash("정책표가 저장되었습니다. 화면이 최신 데이터로 새로고침되었습니다.", "success")
     except Exception as e:
         flash(f"저장 중 오류가 발생했습니다: {e}", "error")
-    return redirect(url_for("routes.admin_policy"))
+    # 저장 후 새로고침 시 캐시 없이 최신 데이터 로드되도록 쿼리 파라미터 추가
+    return redirect(url_for("routes.admin_policy") + "?saved=1#policy-table")
 
 
 @bp.post("/admin/policy/<int:row_id>")
@@ -1021,8 +1013,7 @@ def admin_policy_update(row_id: int):
     row.cash = cash_val
 
     db.session.commit()
-
-    return redirect(url_for("routes.admin_policy"))
+    return redirect(url_for("routes.admin_policy") + "?saved=1#policy-table")
 
 
 def _default_script_templates():

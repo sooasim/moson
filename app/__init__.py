@@ -55,15 +55,17 @@ def create_app():
 
     with app.app_context():
         db.create_all()
-        # 정책 데이터가 없고 엑셀 파일이 있으면 자동 불러오기 (배포 시 초기 데이터 적재)
-        from .models import PolicyRow
-        if PolicyRow.query.count() == 0:
-            xlsx_path = os.path.join(app.root_path, "data", "moson_policy.xlsx")
-            if os.path.isfile(xlsx_path):
-                try:
-                    from .policy_import import run_policy_import
-                    run_policy_import(app, xlsx_path=xlsx_path)
-                except Exception:
-                    pass  # 실패 시 무시 (로컬에 엑셀 없을 수 있음)
+        # 정책표 자동 불러오기: 로컬(SQLite)에서만 실행. 배포(Postgres)에서는 절대 자동 불러오기 하지 않음.
+        # → 커밋/푸시 후 재배포해도 DB에 저장된 수정 내용이 유지됨. 초기 데이터는 어드민 정책표 페이지에서 엑셀 업로드로만 반영.
+        if not database_url:
+            from .models import PolicyRow
+            if PolicyRow.query.count() == 0:
+                xlsx_path = os.path.join(app.root_path, "data", "moson_policy.xlsx")
+                if os.path.isfile(xlsx_path):
+                    try:
+                        from .policy_import import run_policy_import
+                        run_policy_import(app, xlsx_path=xlsx_path)
+                    except Exception:
+                        pass
 
     return app

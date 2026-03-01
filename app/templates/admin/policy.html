@@ -26,8 +26,14 @@
   .policy-page .policy-col-cash-vat input { color: #e67e22 !important; font-weight: 600; }
   /* 정책표 전용 아이콘 (CDN 없이 항상 표시) */
   .policy-page .policy-icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; margin-right: 6px; fill: currentColor; }
+  .policy-page .saved-banner { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.5); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; color: #047857; }
 </style>
 <div class="policy-page">
+{% if request.args.get('saved') %}
+<div class="saved-banner" id="policy-saved-msg">
+  ✓ 정책표가 저장되었습니다. 화면이 최신 데이터로 새로고침되었습니다. 메인 페이지 「내 예상 현금지원액 확인」 및 대리점 정책표에도 동일한 최신 정책이 반영됩니다.
+</div>
+{% endif %}
 {% set has_any_data = groups and (groups["KT 도매"]|length > 0 or groups["LG 도매"]|length > 0 or groups["SKT 도매"]|length > 0 or groups["SKB 도매"]|length > 0 or groups["기타"]|length > 0) %}
 {% if not has_any_data %}
 <div class="card" style="margin-bottom:20px; border:2px solid rgba(239,68,68,.5); background:rgba(239,68,68,.08);">
@@ -60,7 +66,7 @@
   <p class="muted" style="margin:8px 0 0 0; font-size:11px;">불러오기는 마스터 권한에서만 적용됩니다. 상담사는 표만 열람 가능합니다.</p>
 </div>
 {% endif %}
-<form method="post" action="{{ url_for('routes.admin_policy_bulk_update') }}">
+<form method="post" action="{{ url_for('routes.admin_policy_bulk_update') }}" id="policy-table">
 <div class="card">
   <div class="card-header">
     <h2>통신 상품 정책표</h2>
@@ -68,8 +74,9 @@
       moson_policy.xlsx 내용을 기반으로 한 정책표입니다.<br>
       <strong>KT 도매 / LG 도매 / SKT 도매 / SKB 도매</strong> 4개 박스로 나누어,
       각 통신사별 엑셀 항목 구조에 맞춰 표시합니다.<br>
-      각 행의 <strong>현금(VAT 포함/별도)</strong> / <strong>경품가이드</strong>를 수정하면
-      내부적으로 <strong>최종 경품금액</strong>과 <strong>현금</strong> 값이 자동으로 재계산됩니다.
+      각 행의 <strong>현금(VAT 포함/별도)</strong> / <strong>경품가이드</strong>를 수정한 뒤 저장하면
+      <strong>최종 경품금액</strong>·<strong>현금</strong>·<strong>리셀러비용</strong>이 자동 재계산되며,
+      <strong>저장 시 메인 페이지 「내 예상 현금지원액 확인」·대리점 정책표 등 모든 화면에 최신 정책이 즉시 반영됩니다.</strong>
     </p>
   </div>
 </div>

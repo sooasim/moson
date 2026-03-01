@@ -680,7 +680,7 @@
     <script>
         AOS.init();
         
-        const POLICY = {{ policy_summary_json|safe }};
+        const POLICY = {{ policy_summary|tojson }};
 
         // 개통 사례 슬라이더
         new Swiper('.caseSwiper', { loop: true, autoplay: { delay: 3000 }, direction: 'vertical' });

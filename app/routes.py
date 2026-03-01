@@ -164,7 +164,7 @@ def landing():
     return render_template(
         "landing.html",
         partners_json=_partners_json(),
-        policy_summary_json=json.dumps(policy_summary, ensure_ascii=False),
+        policy_summary=policy_summary,
         **ctx,
     )
 

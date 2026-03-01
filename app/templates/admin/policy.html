@@ -22,19 +22,36 @@
   .policy-page .policy-col-cash { color: #b8860b !important; font-weight: 700; }
 </style>
 <div class="policy-page">
-{% if not is_reseller and admin_role == 'master' %}
-<div style="margin-bottom:16px;">
-  <p class="muted" style="font-size:12px; margin-bottom:8px;">서버에 엑셀이 없으면 정책 데이터가 비어 있습니다. 아래에서 <strong>엑셀 파일을 업로드</strong>한 뒤 불러오기를 누르세요.</p>
+{% set has_any_data = groups and (groups["KT 도매"]|length > 0 or groups["LG 도매"]|length > 0 or groups["SKT 도매"]|length > 0 or groups["SKB 도매"]|length > 0 or groups["기타"]|length > 0) %}
+{% if not has_any_data %}
+<div class="card" style="margin-bottom:20px; border:2px solid rgba(239,68,68,.5); background:rgba(239,68,68,.08);">
+  <div class="card-body">
+    <p style="margin:0; font-size:15px; font-weight:700; color:#fca5a5;">
+      ⚠️ 정책 데이터가 없습니다. 아래에서 엑셀을 올린 뒤 불러오기를 눌러 주세요.
+    </p>
+    {% if not is_reseller %}
+    <p style="margin:10px 0 0 0; font-size:13px; color:var(--muted);">1) 파일 선택 → 2) <strong>「업로드한 엑셀로 불러오기」</strong> 클릭 → 3) 새로고침하면 표가 보입니다. (마스터만 불러오기 가능)</p>
+    {% else %}
+    <p style="margin:10px 0 0 0; font-size:13px; color:var(--muted);">마스터 관리자가 엑셀을 업로드해야 데이터가 표시됩니다.</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if not is_reseller %}
+<div class="card" style="margin-bottom:16px; padding:14px;">
+  <p style="margin:0 0 10px 0; font-size:13px; font-weight:700;"><i class="fas fa-file-excel" style="color:var(--accent); margin-right:6px;"></i>엑셀 불러오기 / 저장</p>
   <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
     <form method="post" action="{{ url_for('routes.admin_policy_import_upload') }}" enctype="multipart/form-data" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-      <input type="file" name="policy_excel" accept=".xlsx,.xls" required style="max-width:260px; padding:6px;">
-      <button type="submit" class="btn btn-primary">📤 업로드한 엑셀로 불러오기</button>
+      <input type="file" name="policy_excel" accept=".xlsx,.xls" required style="max-width:280px; padding:8px; font-size:13px;">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-upload" style="margin-right:6px;"></i>업로드한 엑셀로 불러오기</button>
     </form>
     <form method="post" action="{{ url_for('routes.admin_policy_import') }}" style="display:inline;">
-      <button type="submit" class="btn btn-secondary">📥 서버 파일 불러오기 (moson_policy.xlsx)</button>
+      <button type="submit" class="btn btn-secondary"><i class="fas fa-download" style="margin-right:6px;"></i>서버 파일 불러오기</button>
     </form>
-    <a href="{{ url_for('routes.admin_policy_export_excel') }}" class="btn btn-secondary" download>📤 정책표 → 엑셀 다운로드</a>
+    <a href="{{ url_for('routes.admin_policy_export_excel') }}" class="btn btn-secondary" download><i class="fas fa-file-download" style="margin-right:6px;"></i>정책표 엑셀 다운로드</a>
   </div>
+  <p class="muted" style="margin:8px 0 0 0; font-size:11px;">불러오기는 마스터 권한에서만 적용됩니다. 상담사는 표만 열람 가능합니다.</p>
 </div>
 {% endif %}
 <form method="post" action="{{ url_for('routes.admin_policy_bulk_update') }}">
@@ -150,7 +167,7 @@
             <td style="text-align:center;">
                 {% if not is_reseller and admin_role == 'master' %}
                 <button type="submit" class="btn btn-xs" title="전체 저장">
-                  💾
+                  <i class="fas fa-save"></i>
                 </button>
                 {% endif %}
             </td>
@@ -245,7 +262,7 @@
             <td style="text-align:center;">
                 {% if not is_reseller and admin_role == 'master' %}
                 <button type="submit" class="btn btn-xs" title="전체 저장">
-                  💾
+                  <i class="fas fa-save"></i>
                 </button>
                 {% endif %}
             </td>
@@ -329,7 +346,7 @@
             <td style="text-align:center;">
                 {% if not is_reseller and admin_role == 'master' %}
                 <button type="submit" class="btn btn-xs" title="전체 저장">
-                  💾
+                  <i class="fas fa-save"></i>
                 </button>
                 {% endif %}
             </td>
@@ -413,7 +430,7 @@
             <td style="text-align:center;">
                 {% if not is_reseller and admin_role == 'master' %}
                 <button type="submit" class="btn btn-xs" title="전체 저장">
-                  💾
+                  <i class="fas fa-save"></i>
                 </button>
                 {% endif %}
             </td>
@@ -466,7 +483,7 @@
             </td>
             <td style="text-align:center;">
                 <button type="submit" class="btn btn-xs" title="전체 저장">
-                  💾
+                  <i class="fas fa-save"></i>
                 </button>
             </td>
           </tr>
@@ -479,12 +496,10 @@
   {% endif %}
 {% endfor %}
 
-{% if not groups or (groups["KT 도매"]|length == 0 and groups["LG 도매"]|length == 0 and groups["SKT 도매"]|length == 0 and groups["SKB 도매"]|length == 0 and groups["기타"]|length == 0) %}
+{% if not has_any_data %}
   <div class="card" style="margin-top:16px;">
     <div class="card-body">
-      <p class="muted" style="text-align:center; padding:20px 0;">
-        아직 정책 데이터가 없습니다. 위에서 <strong>엑셀 파일을 선택 후 「업로드한 엑셀로 불러오기」</strong>를 눌러 주세요. (배포 서버에는 엑셀 파일이 없을 수 있습니다.)
-      </p>
+      <p class="muted" style="text-align:center; padding:16px 0;">위 안내대로 엑셀을 업로드한 뒤 불러오기를 실행해 주세요.</p>
     </div>
   </div>
 {% endif %}

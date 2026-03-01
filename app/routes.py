@@ -143,12 +143,14 @@ def _policy_summary():
         else:
             continue
 
+        cash_val = r.cash if r.cash is not None else 0
         entry = {
             "id": r.id,
             "kind": (r.kind or "").strip() or "기타",
             "category": (r.category or "").strip() or "",
             "product_name": (r.product_name or "").strip() or "-",
             "month_fee": r.month_fee,
+            "cash": cash_val,
         }
         result.setdefault(logical_telco, []).append(entry)
 

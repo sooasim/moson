@@ -15,10 +15,17 @@ def create_app():
     # Secret key
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-change-me")
 
-    # Database: store under instance/ (works on Windows, Linux, etc)
-    os.makedirs(app.instance_path, exist_ok=True)
-    db_path = os.path.join(app.instance_path, "moson.sqlite3")
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", f"sqlite:///{db_path}")
+    # Database: Railway Postgres uses DATABASE_URL; locally defaults to SQLite
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        # Railway/Heroku use "postgres://", SQLAlchemy 1.4+ needs "postgresql://"
+        if database_url.startswith("postgres://"):
+            database_url = "postgresql://" + database_url[9:]
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    else:
+        os.makedirs(app.instance_path, exist_ok=True)
+        db_path = os.path.join(app.instance_path, "moson.sqlite3")
+        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     # Domain settings
@@ -48,5 +55,15 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        # 정책 데이터가 없고 엑셀 파일이 있으면 자동 불러오기 (배포 시 초기 데이터 적재)
+        from .models import PolicyRow
+        if PolicyRow.query.count() == 0:
+            xlsx_path = os.path.join(app.root_path, "data", "moson_policy.xlsx")
+            if os.path.isfile(xlsx_path):
+                try:
+                    from .policy_import import run_policy_import
+                    run_policy_import(app, xlsx_path=xlsx_path)
+                except Exception:
+                    pass  # 실패 시 무시 (로컬에 엑셀 없을 수 있음)
 
     return app

@@ -14,6 +14,11 @@
   }
 </style>
 <div class="policy-page">
+{% if not is_reseller and admin_role == 'master' %}
+<form method="post" action="{{ url_for('routes.admin_policy_import') }}" style="margin-bottom:12px;">
+  <button type="submit" class="btn btn-primary">📥 엑셀에서 불러오기 (moson_policy.xlsx)</button>
+</form>
+{% endif %}
 <form method="post" action="{{ url_for('routes.admin_policy_bulk_update') }}">
 <div class="card">
   <div class="card-header">
@@ -461,9 +466,14 @@
 {% if not groups or (groups["KT 도매"]|length == 0 and groups["LG 도매"]|length == 0 and groups["SKT 도매"]|length == 0 and groups["SKB 도매"]|length == 0 and groups["기타"]|length == 0) %}
   <div class="card" style="margin-top:16px;">
     <div class="card-body">
-      <p class="muted" style="text-align:center; padding:40px 0;">
-        아직 정책 데이터가 없습니다. moson_policy.xlsx에서 불러오거나 직접 추가해 주세요.
+      <p class="muted" style="text-align:center; padding:20px 0;">
+        아직 정책 데이터가 없습니다. moson_policy.xlsx에서 불러오거나 위의 <strong>엑셀에서 불러오기</strong> 버튼을 사용하세요.
       </p>
+      {% if not is_reseller and admin_role == 'master' %}
+      <form method="post" action="{{ url_for('routes.admin_policy_import') }}" style="text-align:center;">
+        <button type="submit" class="btn btn-primary">📥 엑셀에서 불러오기</button>
+      </form>
+      {% endif %}
     </div>
   </div>
 {% endif %}

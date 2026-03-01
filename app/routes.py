@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import secrets
 import json
 from datetime import datetime, timedelta
@@ -764,6 +765,23 @@ def admin_email_logs():
     )
 
 
+@bp.post("/admin/policy/import")
+def admin_policy_import():
+    """엑셀(moson_policy.xlsx)에서 정책 데이터 불러오기. 마스터만."""
+    if get_tenant():
+        return redirect(url_for("routes.admin_index"))
+    gate = _require_master()
+    if gate:
+        return gate
+    from .policy_import import run_policy_import
+    success, message, count = run_policy_import(current_app)
+    if success:
+        flash(message, "success")
+    else:
+        flash(message, "error")
+    return redirect(url_for("routes.admin_policy"))
+
+
 @bp.get("/admin/policy")
 def admin_policy():
     """통신 상품 정책표 (메인 어드민 + 대리점 어드민 열람)."""
@@ -780,6 +798,21 @@ def admin_policy():
     rows = PolicyRow.query.order_by(
         PolicyRow.telco.asc().nullslast(), PolicyRow.id.asc()
     ).all()
+
+    # 정책 데이터가 없고, 메인 마스터이며, 엑셀 파일이 있으면 자동으로 불러오기
+    if not rows and not tenant and session.get("admin_role") == "master":
+        xlsx_path = os.path.join(current_app.root_path, "data", "moson_policy.xlsx")
+        if os.path.isfile(xlsx_path):
+            try:
+                from .policy_import import run_policy_import
+                success, message, _ = run_policy_import(current_app, xlsx_path=xlsx_path)
+                if success:
+                    flash(message, "success")
+                    rows = PolicyRow.query.order_by(
+                        PolicyRow.telco.asc().nullslast(), PolicyRow.id.asc()
+                    ).all()
+            except Exception:
+                pass
 
     # 통신사 그룹별(KT 도매 / LG 도매 / SKT 도매 / SKB 도매)로 박스 분리
     groups = {

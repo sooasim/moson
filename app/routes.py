@@ -177,6 +177,7 @@ def api_policy_quote():
         row = PolicyRow.query.get(row_id_param)
         if row is None:
             return jsonify({"ok": False, "error": "policy row not found"}), 404
+        # 정책표 기준: 최종 경품금액(원) = final_gift(만원)*10000, KT는 상품권 추가
         cash_support = (row.final_gift or 0) * 10000
         voucher = (row.voucher or 0) if (row.telco or "").strip().upper().startswith("KT") else 0
         total_cash = cash_support + voucher

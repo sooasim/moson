@@ -14,12 +14,16 @@
   @media (min-width: 1200px) {
     .policy-page .scroll-panel { max-height: min(72vh, 700px); }
   }
-  /* 항목별 직관 색상: 경품가이드(붉은색), 상품권(초록), 현금VAT포함(주황), 상품권+현금(파랑), 현금(노랑/골드) */
+  /* 항목별 직관 색상: 경품가이드(붉은색), 상품권(초록), 현금VAT포함(주황), 상품권+현금(파랑), 현금(노랑/골드), 리셀러비용(핑크) */
   .policy-page .policy-col-guide { color: #c0392b !important; font-weight: 600; }
   .policy-page .policy-col-voucher { color: #27ae60 !important; font-weight: 600; }
   .policy-page .policy-col-cash-vat { color: #e67e22 !important; font-weight: 600; }
   .policy-page .policy-col-total { color: #2980b9 !important; font-weight: 600; }
   .policy-page .policy-col-cash { color: #b8860b !important; font-weight: 700; }
+  .policy-page .policy-col-reseller { color: #ec4899 !important; font-weight: 600; }
+  /* 입력창 내 텍스트에도 동일 색상 적용 */
+  .policy-page .policy-col-guide input { color: #c0392b !important; font-weight: 600; }
+  .policy-page .policy-col-cash-vat input { color: #e67e22 !important; font-weight: 600; }
   /* 정책표 전용 아이콘 (CDN 없이 항상 표시) */
   .policy-page .policy-icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; margin-right: 6px; fill: currentColor; }
 </style>
@@ -102,7 +106,7 @@
             <th class="policy-col-guide" style="min-width:220px;">경품가이드</th>
             <th class="policy-col-voucher" style="min-width:90px;">상품권</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
-            <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
             <th class="policy-col-cash" style="min-width:100px;">현금</th>
             <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
@@ -139,7 +143,7 @@
             <td class="text-right">
               {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
             </td>
-            <td class="text-right">
+            <td class="policy-col-reseller text-right">
               {% if r.cash is not none %}
                 {% set rf = (r.cash * 25) // 100 %}
                 {{ "{:,}".format(rf) }}원
@@ -198,7 +202,7 @@
             <th class="policy-col-guide" style="min-width:220px;">경품가이드</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
             <th class="policy-col-voucher" style="min-width:90px;">상품권</th>
-            <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
             <th class="policy-col-cash" style="min-width:100px;">현금</th>
             <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
@@ -234,7 +238,7 @@
                 -
               {% endif %}
             </td>
-            <td class="text-right">
+            <td class="policy-col-reseller text-right">
               {% if r.cash is not none %}
                 {% set rf = (r.cash * 25) // 100 %}
                 {{ "{:,}".format(rf) }}원
@@ -295,7 +299,7 @@
             <th style="min-width:90px;">3년 이상</th>
             <th class="policy-col-guide" style="min-width:220px;">경품가이드</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
-            <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
             <th class="policy-col-cash" style="min-width:100px;">현금</th>
             <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
@@ -325,7 +329,7 @@
             <td class="text-right">
               {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
             </td>
-            <td class="text-right">
+            <td class="policy-col-reseller text-right">
               {% if r.cash is not none %}
                 {% set rf = (r.cash * 25) // 100 %}
                 {{ "{:,}".format(rf) }}원
@@ -379,7 +383,7 @@
             <th style="min-width:90px;">3년 이상</th>
             <th class="policy-col-guide" style="min-width:220px;">경품가이드</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
-            <th style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
             <th class="policy-col-cash" style="min-width:100px;">현금</th>
             <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT별도</th>
@@ -409,7 +413,7 @@
             <td class="text-right">
               {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
             </td>
-            <td class="text-right">
+            <td class="policy-col-reseller text-right">
               {% if r.cash is not none %}
                 {% set rf = (r.cash * 25) // 100 %}
                 {{ "{:,}".format(rf) }}원

@@ -62,22 +62,45 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
             except Exception as e:
                 return False, f"엑셀 읽기 실패: {e}", 0
 
-            if len(df.columns) < 45:
-                return False, "엑셀 열 개수가 부족합니다 (45열 이상 필요).", 0
+            col_count = len(df.columns)
 
-            col_telco = df.columns[32]
-            col_kind = df.columns[33]
-            col_category = df.columns[34]
-            col_product = df.columns[35]
-            col_month = df.columns[36]
-            col_promo1 = df.columns[37]
-            col_promo2 = df.columns[38]
-            col_promo3 = df.columns[39]
-            col_promo4 = df.columns[40]
-            col_guide = df.columns[41]
-            col_voucher = df.columns[42]
-            col_cash_vat = df.columns[43]
-            col_total = df.columns[44]
+            # 두 가지 형식 지원:
+            # 1) 원본 양식: 오른쪽 33~45열(1-based, 인덱스 32~44)에 정책 블록이 있는 45열 이상 파일
+            # 2) 간단 양식: 불필요한 열을 제거하고, 정책 블록만 13열(통신사~합산)로 구성한 파일
+            if col_count >= 45:
+                # 기존(원본) 양식: 오른쪽 블록에서 열 위치 고정
+                col_telco = df.columns[32]
+                col_kind = df.columns[33]
+                col_category = df.columns[34]
+                col_product = df.columns[35]
+                col_month = df.columns[36]
+                col_promo1 = df.columns[37]
+                col_promo2 = df.columns[38]
+                col_promo3 = df.columns[39]
+                col_promo4 = df.columns[40]
+                col_guide = df.columns[41]
+                col_voucher = df.columns[42]
+                col_cash_vat = df.columns[43]
+                col_total = df.columns[44]
+                compact_mode = False
+            else:
+                # 간단 양식: 왼쪽부터 13열만 사용 (통신사~합산 순서 고정)
+                if col_count < 13:
+                    return False, "엑셀 열 개수가 부족합니다 (간단 양식은 최소 13열, 원본 양식은 45열 이상 필요).", 0
+                col_telco = df.columns[0]
+                col_kind = df.columns[1]
+                col_category = df.columns[2]
+                col_product = df.columns[3]
+                col_month = df.columns[4]
+                col_promo1 = df.columns[5]
+                col_promo2 = df.columns[6]
+                col_promo3 = df.columns[7]
+                col_promo4 = df.columns[8]
+                col_guide = df.columns[9]
+                col_voucher = df.columns[10]
+                col_cash_vat = df.columns[11]
+                col_total = df.columns[12]
+                compact_mode = True
 
             PolicyRow.query.delete()
             db.session.commit()
@@ -119,8 +142,10 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
                 promo3 = _promo_val(col_promo3)
                 promo4 = _promo_val(col_promo4) if telco != "LG" else None
 
-                is_lg_other = (telco or "").strip().upper() == "LG" and (
-                    "기타" in (kind or "") or "기타" in (category or "")
+                is_lg_other = (
+                    not compact_mode
+                    and (telco or "").strip().upper() == "LG"
+                    and ("기타" in (kind or "") or "기타" in (category or ""))
                 )
                 if is_lg_other and len(df.columns) > 42:
                     def _looks_like_guide(val):

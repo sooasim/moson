@@ -58,76 +58,99 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
     with app.app_context():
         try:
             try:
+                # 원본 moson_policy.xlsx 구조: 오른쪽 33~45열(1-based, 인덱스 32~44)에 정책 블록이 있음
                 df = pd.read_excel(source, sheet_name=0, header=1)
             except Exception as e:
                 return False, f"엑셀 읽기 실패: {e}", 0
 
-            # 현재 moson_policy.xlsx 원본 구조(10열 기준)에 맞춰
-            # 열 위치(인덱스)만으로 매핑한다.
-            col_count = len(df.columns)
-            if col_count < 9:
-                return False, f"엑셀 열 개수가 너무 적습니다 (현재 {col_count}열, 최소 9열 필요).", 0
+            if len(df.columns) < 45:
+                return False, "엑셀 열 개수가 부족합니다 (45열 이상 필요).", 0
 
-            cols = list(df.columns)
-            col_telco = cols[0]     # 통신사
-            col_kind = cols[1]      # 종류
-            col_category = cols[2]  # 구분
-            col_product = cols[3]   # 상품명
-            col_month = cols[4]     # 월요금
-            col_guide = cols[5]     # 경품가이드
-            col_voucher = cols[6]   # 상품권
-            col_cash_vat = cols[7]  # 현금 VAT포함
-            col_total = cols[8]     # 합산(상품권+현금 등)
-
-            # 프로모션 컬럼은 현재 10열 원본에서는 별도로 사용하지 않으므로 None 처리
-            col_promo1 = None
-            col_promo2 = None
-            col_promo3 = None
-            col_promo4 = None
-
-            # 길이 제한 헬퍼 (DB 스키마에 맞게 잘라줌)
-            def _clip(val, max_len):
-                if val is None:
-                    return None
-                s = str(val).strip()
-                if not s or s.lower() == "nan":
-                    return None
-                return s[:max_len]
+            col_telco = df.columns[32]
+            col_kind = df.columns[33]
+            col_category = df.columns[34]
+            col_product = df.columns[35]
+            col_month = df.columns[36]
+            col_promo1 = df.columns[37]
+            col_promo2 = df.columns[38]
+            col_promo3 = df.columns[39]
+            col_promo4 = df.columns[40]
+            col_guide = df.columns[41]
+            col_voucher = df.columns[42]
+            col_cash_vat = df.columns[43]
+            col_total = df.columns[44]
 
             PolicyRow.query.delete()
             db.session.commit()
 
             rows = 0
             for _, row in df.iterrows():
-                telco_raw = row.get(col_telco)
-                telco = _clip(telco_raw, 50)
+                telco = (str(row.get(col_telco)).strip()
+                         if row.get(col_telco) is not None and str(row.get(col_telco)).strip() not in ("", "nan")
+                         else None)
                 if not telco:
                     continue
 
-                kind = _clip(row.get(col_kind), 100)
-                category = _clip(row.get(col_category), 100)
-                product = _clip(row.get(col_product), 200)
-
-                # 헤더 행(예: 통신사/종류/구분/상품명/월요금 라인)은 스킵
-                if telco in ("통신사", "종류") or product in ("상품명", "월요금"):
-                    continue
+                kind = (str(row.get(col_kind)).strip()
+                        if row.get(col_kind) is not None and str(row.get(col_kind)).strip() not in ("", "nan")
+                        else None)
+                category = (str(row.get(col_category)).strip()
+                            if row.get(col_category) is not None and str(row.get(col_category)).strip() not in ("", "nan")
+                            else None)
+                product = (str(row.get(col_product)).strip()
+                           if row.get(col_product) is not None and str(row.get(col_product)).strip() not in ("", "nan")
+                           else None)
 
                 month_fee = _parse_int(row.get(col_month))
 
-                guide_text = row.get(col_guide)
+                def _promo_val(col):
+                    v = row.get(col)
+                    if v is None:
+                        return None
+                    s = str(v).strip()
+                    if s in ("", "nan"):
+                        return None
+                    try:
+                        return str(int(float(s)))
+                    except Exception:
+                        return s
+
+                promo1 = _promo_val(col_promo1)
+                promo2 = _promo_val(col_promo2)
+                promo3 = _promo_val(col_promo3)
+                promo4 = _promo_val(col_promo4) if (telco or "").strip().upper() != "LG" else None
+
+                # LG 기타(추가 상품) 특수 처리: 경품가이드가 엉뚱한 열에 있는 경우 보정
+                is_lg_other = (telco or "").strip().upper().startswith("LG") and (
+                    "기타" in (kind or "") or "기타" in (category or "")
+                )
+                if is_lg_other and len(df.columns) > 42:
+                    def _looks_like_guide(val):
+                        if val is None:
+                            return False
+                        s = str(val).strip()
+                        if s in ("", "nan"):
+                            return False
+                        if s.isdigit():
+                            return False
+                        if not re.search(r"\d", s):
+                            return False
+                        return True
+
+                    guide_text = None
+                    for idx in (40, 41, 42):
+                        cand = row.get(df.columns[idx])
+                        if _looks_like_guide(cand):
+                            guide_text = cand
+                            break
+                    if guide_text is None:
+                        guide_text = row.get(col_guide)
+                else:
+                    guide_text = row.get(col_guide)
+
                 voucher_val = _parse_int(row.get(col_voucher))
                 cash_vat_val = _parse_int(row.get(col_cash_vat))
                 total_fee_val = _parse_int(row.get(col_total))
-
-                # 메모/주의사항 행: 실제 요금/경품/상품권/현금 정보가 없으면 스킵
-                if (
-                    month_fee is None
-                    and voucher_val is None
-                    and cash_vat_val is None
-                    and total_fee_val is None
-                    and (guide_text is None or str(guide_text).strip().lower() in ("", "nan"))
-                ):
-                    continue
 
                 final_gift = _max_number_in_text(guide_text)
                 cash_val = None
@@ -140,10 +163,10 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
                     category=category,
                     product_name=product,
                     month_fee=month_fee,
-                    promo1=None,
-                    promo2=None,
-                    promo3=None,
-                    promo4=None,
+                    promo1=promo1,
+                    promo2=promo2,
+                    promo3=promo3,
+                    promo4=promo4,
                     gift_guide=str(guide_text) if guide_text is not None else None,
                     voucher=voucher_val,
                     cash_vat=cash_vat_val,

@@ -66,7 +66,7 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
             # 열 위치(인덱스)만으로 매핑한다.
             col_count = len(df.columns)
             if col_count < 9:
-                return False, f\"엑셀 열 개수가 너무 적습니다 (현재 {col_count}열, 최소 9열 필요).\", 0
+                return False, f"엑셀 열 개수가 너무 적습니다 (현재 {col_count}열, 최소 9열 필요).", 0
 
             cols = list(df.columns)
             col_telco = cols[0]     # 통신사
@@ -91,19 +91,19 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
             rows = 0
             for _, row in df.iterrows():
                 telco = (str(row.get(col_telco)).strip()
-                         if row.get(col_telco) is not None and str(row.get(col_telco)).strip() not in (\"\", \"nan\")
+                         if row.get(col_telco) is not None and str(row.get(col_telco)).strip() not in ("", "nan")
                          else None)
                 if not telco:
                     continue
 
                 kind = (str(row.get(col_kind)).strip()
-                        if row.get(col_kind) is not None and str(row.get(col_kind)).strip() not in (\"\", \"nan\")
+                        if row.get(col_kind) is not None and str(row.get(col_kind)).strip() not in ("", "nan")
                         else None)
                 category = (str(row.get(col_category)).strip()
-                            if row.get(col_category) is not None and str(row.get(col_category)).strip() not in (\"\", \"nan\")
+                            if row.get(col_category) is not None and str(row.get(col_category)).strip() not in ("", "nan")
                             else None)
                 product = (str(row.get(col_product)).strip()
-                           if row.get(col_product) is not None and str(row.get(col_product)).strip() not in (\"\", \"nan\")
+                           if row.get(col_product) is not None and str(row.get(col_product)).strip() not in ("", "nan")
                            else None)
 
                 month_fee = _parse_int(row.get(col_month))
@@ -142,4 +142,4 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
         except Exception as e:
             return False, str(e), 0
 
-    return True, f\"정책 데이터 {rows}건을 불러왔습니다.\", rows
+    return True, f"정책 데이터 {rows}건을 불러왔습니다.", rows

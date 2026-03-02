@@ -29,8 +29,10 @@
   .policy-page .policy-col-total { color: #2980b9 !important; font-weight: 600; }
   .policy-page .policy-col-cash { color: #b8860b !important; font-weight: 700; }
   .policy-page .policy-col-reseller { color: #ec4899 !important; font-weight: 600; }
+  .policy-page .policy-col-end-amount { color: #2563eb !important; font-weight: 600; } /* 파란색 END금액 */
+  .policy-page .policy-col-end-cash { color: #dc2626 !important; font-weight: 600; }   /* 빨간색 END현금 */
   /* 입력창 내 텍스트에도 동일 색상 적용 */
-  .policy-page .policy-col-guide input { color: #c0392b !important; font-weight: 600; max-width: 7ch; }
+  .policy-page .policy-col-guide input { color: #c0392b !important; font-weight: 600; max-width: 14ch; }
   .policy-page .policy-col-cash-vat input { color: #e67e22 !important; font-weight: 600; }
   /* 정책표 전용 아이콘 (CDN 없이 항상 표시) */
   .policy-page .policy-icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; margin-right: 6px; fill: currentColor; }
@@ -112,19 +114,19 @@
             <th style="width:70px;">ID</th>
             <th style="min-width:90px;">종류</th>
             <th style="min-width:90px;">구분</th>
-            <th style="min-width:200px;">상품명</th>
+            <th style="min-width:180px;">상품명</th>
             <th style="min-width:90px;">월요금</th>
             <th style="min-width:120px;">정액결합<br>모바일 37K↑</th>
             <th style="min-width:120px;">총액결합<br>모바일 65K↑</th>
             <th style="min-width:110px;">프리미엄가족</th>
             <th style="min-width:110px;">프리미엄싱글</th>
-            <th class="policy-col-guide" style="min-width:120px;">경품가이드</th>
+            <th class="policy-col-guide" style="min-width:180px;">경품가이드</th>
             <th class="policy-col-voucher" style="min-width:90px;">상품권</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
             <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th style="min-width:120px;">END금액<br>(최종경품+리셀러)</th>
-            <th style="min-width:120px;">END현금<br>(현금-리셀러)</th>
+            <th class="policy-col-end-amount" style="min-width:140px;">END금액<br>(최종경품+리셀러)</th>
+            <th class="policy-col-end-cash" style="min-width:140px;">END현금<br>(현금-리셀러)</th>
             <th class="policy-col-cash" style="min-width:100px;">현금</th>
             <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
             <th class="policy-col-total" style="min-width:140px;">최종수수료<br>(상품권+현금 합산)</th>
@@ -148,7 +150,7 @@
             <td>{{ r.promo4 or '-' }}</td>
 
             <td class="policy-col-guide">
-                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:7ch;">
+                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:14ch;">
             </td>
             <td class="policy-col-voucher text-right">
               {% if r.voucher is not none %}
@@ -157,7 +159,7 @@
                 -
               {% endif %}
             </td>
-            <td class="text-right">
+            <td class="policy-col-end-amount text-right">
               {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
             </td>
             <td class="policy-col-reseller text-right">
@@ -169,7 +171,7 @@
               {% endif %}
             </td>
             {% if not is_reseller %}
-            <td class="text-right">
+            <td class="policy-col-end-cash text-right">
               {% if r.cash is not none %}
                 {% set rf = (r.cash * 25) // 100 %}
                 {% set end_amount = ((r.final_gift or 0) * 10000) + rf %}
@@ -229,18 +231,18 @@
             <th style="width:70px;">ID</th>
             <th style="min-width:90px;">종류</th>
             <th style="min-width:90px;">구분</th>
-            <th style="min-width:200px;">상품명</th>
+            <th style="min-width:180px;">상품명</th>
             <th style="min-width:90px;">월요금</th>
             <th style="min-width:90px;">참쉬운</th>
             <th style="min-width:90px;">투게더</th>
             <th style="min-width:110px;">인터넷끼리</th>
-            <th class="policy-col-guide" style="min-width:120px;">경품가이드</th>
+            <th class="policy-col-guide" style="min-width:180px;">경품가이드</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
             <th class="policy-col-voucher" style="min-width:90px;">상품권</th>
             <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th style="min-width:120px;">END금액<br>(최종경품+리셀러)</th>
-            <th style="min-width:120px;">END현금<br>(현금-리셀러)</th>
+            <th class="policy-col-end-amount" style="min-width:140px;">END금액<br>(최종경품+리셀러)</th>
+            <th class="policy-col-end-cash" style="min-width:140px;">END현금<br>(현금-리셀러)</th>
             <th class="policy-col-cash" style="min-width:100px;">현금</th>
             <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
             <th class="policy-col-total" style="min-width:140px;">상품권+현금<br>VAT포함</th>
@@ -263,9 +265,9 @@
             <td>{{ r.promo3 or '-' }}</td>
 
             <td class="policy-col-guide">
-                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:7ch;">
+                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:14ch;">
             </td>
-            <td class="text-right">
+            <td class="policy-col-end-amount text-right">
               {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
             </td>
             <td class="policy-col-voucher">
@@ -284,7 +286,7 @@
               {% endif %}
             </td>
             {% if not is_reseller %}
-            <td class="text-right">
+            <td class="policy-col-end-cash text-right">
               {% if r.cash is not none %}
                 {% set rf = (r.cash * 25) // 100 %}
                 {% set end_amount = ((r.final_gift or 0) * 10000) + rf %}
@@ -344,7 +346,7 @@
           <tr>
             <th style="width:70px;">ID</th>
             <th style="min-width:90px;">종류</th>
-            <th style="min-width:200px;">상품명</th>
+            <th style="min-width:180px;">상품명</th>
             <th style="min-width:90px;">월요금</th>
             <th style="min-width:110px;">요즘가족<br>(알뜰한)</th>
             <th style="min-width:90px;">패밀리</th>
@@ -352,12 +354,12 @@
             <th style="min-width:90px;">2년 미만</th>
             <th style="min-width:90px;">3년 미만</th>
             <th style="min-width:90px;">3년 이상</th>
-            <th class="policy-col-guide" style="min-width:120px;">경품가이드</th>
+            <th class="policy-col-guide" style="min-width:180px;">경품가이드</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
             <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th style="min-width:120px;">END금액<br>(최종경품+리셀러)</th>
-            <th style="min-width:120px;">END현금<br>(현금-리셀러)</th>
+            <th class="policy-col-end-amount" style="min-width:140px;">END금액<br>(최종경품+리셀러)</th>
+            <th class="policy-col-end-cash" style="min-width:140px;">END현금<br>(현금-리셀러)</th>
             <th class="policy-col-cash" style="min-width:100px;">현금</th>
             <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
             {% endif %}
@@ -381,7 +383,7 @@
             <td>-</td>
 
             <td class="policy-col-guide">
-                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:7ch;">
+                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:14ch;">
             </td>
             <td class="text-right">
               {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
@@ -395,7 +397,7 @@
               {% endif %}
             </td>
             {% if not is_reseller %}
-            <td class="text-right">
+            <td class="policy-col-end-amount text-right">
               {% if r.cash is not none %}
                 {% set rf = (r.cash * 25) // 100 %}
                 {% set end_amount = ((r.final_gift or 0) * 10000) + rf %}
@@ -404,7 +406,7 @@
                 -
               {% endif %}
             </td>
-            <td class="text-right">
+            <td class="policy-col-end-cash text-right">
               {% if r.cash is not none %}
                 {% set rf = (r.cash * 25) // 100 %}
                 {% set end_cash = r.cash - rf %}
@@ -448,7 +450,7 @@
           <tr>
             <th style="width:70px;">ID</th>
             <th style="min-width:90px;">종류</th>
-            <th style="min-width:200px;">상품명</th>
+            <th style="min-width:180px;">상품명</th>
             <th style="min-width:90px;">월요금</th>
             <th style="min-width:90px;">요즘가족</th>
             <th style="min-width:90px;">패밀리</th>
@@ -456,12 +458,12 @@
             <th style="min-width:90px;">2년 미만</th>
             <th style="min-width:90px;">3년 미만</th>
             <th style="min-width:90px;">3년 이상</th>
-            <th class="policy-col-guide" style="min-width:120px;">경품가이드</th>
+            <th class="policy-col-guide" style="min-width:180px;">경품가이드</th>
             <th style="min-width:120px;">최종 경품금액<br>(원)</th>
             <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th style="min-width:120px;">END금액<br>(최종경품+리셀러)</th>
-            <th style="min-width:120px;">END현금<br>(현금-리셀러)</th>
+            <th class="policy-col-end-amount" style="min-width:140px;">END금액<br>(최종경품+리셀러)</th>
+            <th class="policy-col-end-cash" style="min-width:140px;">END현금<br>(현금-리셀러)</th>
             <th class="policy-col-cash" style="min-width:100px;">현금</th>
             <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT별도</th>
             {% endif %}
@@ -485,7 +487,7 @@
             <td>-</td>
 
             <td class="policy-col-guide">
-                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:7ch;">
+                <input type="text" name="gift_guide_{{ r.id }}" value="{{ r.gift_guide or '' }}" style="width:14ch;">
             </td>
             <td class="text-right">
               {% if r.final_gift is not none %}{{ "{:,}".format(r.final_gift * 10000) }}원{% else %}-{% endif %}
@@ -499,7 +501,7 @@
               {% endif %}
             </td>
             {% if not is_reseller %}
-            <td class="text-right">
+            <td class="policy-col-end-amount text-right">
               {% if r.cash is not none %}
                 {% set rf = (r.cash * 25) // 100 %}
                 {% set end_amount = ((r.final_gift or 0) * 10000) + rf %}
@@ -508,7 +510,7 @@
                 -
               {% endif %}
             </td>
-            <td class="text-right">
+            <td class="policy-col-end-cash text-right">
               {% if r.cash is not none %}
                 {% set rf = (r.cash * 25) // 100 %}
                 {% set end_cash = r.cash - rf %}

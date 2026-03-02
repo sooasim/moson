@@ -58,103 +58,133 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
     with app.app_context():
         try:
             try:
-                # 원본 moson_policy.xlsx 구조: 오른쪽 33~45열(1-based, 인덱스 32~44)에 정책 블록이 있음
-                df = pd.read_excel(source, sheet_name=0, header=1)
+                # 현재 moson_policy.xlsx 원본(140행 × 12열) 구조를 그대로 사용
+                # 통신사별 헤더/데이터가 0~11열에 위치함 (KT/LG/SKB/SKT 공통)
+                df = pd.read_excel(source, sheet_name=0, header=None)
             except Exception as e:
                 return False, f"엑셀 읽기 실패: {e}", 0
 
-            if len(df.columns) < 45:
-                return False, "엑셀 열 개수가 부족합니다 (45열 이상 필요).", 0
+            col_count = len(df.columns)
+            if col_count < 11:
+                return False, f"엑셀 열 개수가 너무 적습니다 (현재 {col_count}열, 최소 11열 필요).", 0
 
-            col_telco = df.columns[32]
-            col_kind = df.columns[33]
-            col_category = df.columns[34]
-            col_product = df.columns[35]
-            col_month = df.columns[36]
-            col_promo1 = df.columns[37]
-            col_promo2 = df.columns[38]
-            col_promo3 = df.columns[39]
-            col_promo4 = df.columns[40]
-            col_guide = df.columns[41]
-            col_voucher = df.columns[42]
-            col_cash_vat = df.columns[43]
-            col_total = df.columns[44]
+            def _get_str(row, idx, max_len=None):
+                v = row[idx] if idx < len(row) else None
+                if v is None or (isinstance(v, float) and pd.isna(v)):
+                    return None
+                s = str(v).strip()
+                if not s or s.lower() == "nan":
+                    return None
+                if max_len is not None:
+                    return s[:max_len]
+                return s
 
             PolicyRow.query.delete()
             db.session.commit()
 
             rows = 0
-            for _, row in df.iterrows():
-                telco = (str(row.get(col_telco)).strip()
-                         if row.get(col_telco) is not None and str(row.get(col_telco)).strip() not in ("", "nan")
-                         else None)
-                if not telco:
+            current_telco = None  # "KT 도매" / "LG 도매" / "SKB 도매" / "SKT 도매"
+
+            for idx, row in df.iterrows():
+                c0 = _get_str(row, 0)
+                upper0 = (c0 or "").upper()
+
+                # 통신사 섹션 헤더 감지
+                if c0 and "KT" in upper0:
+                    current_telco = "KT 도매"
+                    continue
+                if c0 and "LG" in upper0:
+                    current_telco = "LG 도매"
+                    continue
+                if c0 and "SKB" in upper0:
+                    current_telco = "SKB 도매"
+                    continue
+                if c0 and "SKT" in upper0:
+                    current_telco = "SKT 도매"
                     continue
 
-                kind = (str(row.get(col_kind)).strip()
-                        if row.get(col_kind) is not None and str(row.get(col_kind)).strip() not in ("", "nan")
-                        else None)
-                category = (str(row.get(col_category)).strip()
-                            if row.get(col_category) is not None and str(row.get(col_category)).strip() not in ("", "nan")
-                            else None)
-                product = (str(row.get(col_product)).strip()
-                           if row.get(col_product) is not None and str(row.get(col_product)).strip() not in ("", "nan")
-                           else None)
+                if current_telco is None:
+                    # 아직 어떤 통신사 블록인지 모르면 스킵
+                    continue
 
-                month_fee = _parse_int(row.get(col_month))
+                # 헤더 행(종류/상품명/월요금 등) 스킵
+                c2 = _get_str(row, 2)
+                c3 = _get_str(row, 3)
+                if (c0 and "종류" in c0) or (c2 and "상품" in c2) or (c3 and "월요금" in c3):
+                    continue
 
-                def _promo_val(col):
-                    v = row.get(col)
-                    if v is None:
-                        return None
-                    s = str(v).strip()
-                    if s in ("", "nan"):
-                        return None
-                    try:
-                        return str(int(float(s)))
-                    except Exception:
-                        return s
+                # 데이터가 거의 없는 메모/빈 행 스킵
+                core_vals = [row.get(i) for i in range(2, 11)]
+                if all((v is None or (isinstance(v, float) and pd.isna(v))) for v in core_vals):
+                    continue
 
-                promo1 = _promo_val(col_promo1)
-                promo2 = _promo_val(col_promo2)
-                promo3 = _promo_val(col_promo3)
-                promo4 = _promo_val(col_promo4) if (telco or "").strip().upper() != "LG" else None
+                telco = current_telco
 
-                # LG 기타(추가 상품) 특수 처리: 경품가이드가 엉뚱한 열에 있는 경우 보정
-                is_lg_other = (telco or "").strip().upper().startswith("LG") and (
-                    "기타" in (kind or "") or "기타" in (category or "")
-                )
-                if is_lg_other and len(df.columns) > 42:
-                    def _looks_like_guide(val):
-                        if val is None:
-                            return False
-                        s = str(val).strip()
-                        if s in ("", "nan"):
-                            return False
-                        if s.isdigit():
-                            return False
-                        if not re.search(r"\d", s):
-                            return False
-                        return True
+                # 통신사별 열 매핑
+                if telco.startswith("KT"):
+                    # 0:종류, 1:구분, 2:상품명, 3:월요금, 4~7:정액/총액/프리미엄, 8:경품가이드, 9:상품권, 10:현금VAT, 11:합산
+                    kind = _get_str(row, 0, 100)
+                    category = _get_str(row, 1, 100)
+                    product = _get_str(row, 2, 200)
+                    month_fee = _parse_int(row.get(3))
+                    promo1 = _get_str(row, 4, 100)
+                    promo2 = _get_str(row, 5, 100)
+                    promo3 = _get_str(row, 6, 100)
+                    promo4 = _get_str(row, 7, 100)
+                    guide_text = _get_str(row, 8, 400)
+                    voucher_val = _parse_int(row.get(9))
+                    cash_vat_val = _parse_int(row.get(10))
+                    total_fee_val = _parse_int(row.get(11))
+                elif telco.startswith("LG"):
+                    # 0:종류, 1:구분, 2:상품명, 3:월요금, 4:참쉬운, 5:투게더, 6:인터넷끼리, 7:경품가이드, 8:상품권, 9:현금VAT, 10:상품권+현금VAT
+                    kind = _get_str(row, 0, 100)
+                    category = _get_str(row, 1, 100)
+                    product = _get_str(row, 2, 200)
+                    month_fee = _parse_int(row.get(3))
+                    promo1 = _get_str(row, 4, 100)
+                    promo2 = _get_str(row, 5, 100)
+                    promo3 = _get_str(row, 6, 100)
+                    promo4 = None
+                    guide_text = _get_str(row, 7, 400)
+                    voucher_val = _parse_int(row.get(8))
+                    cash_vat_val = _parse_int(row.get(9))
+                    total_fee_val = _parse_int(row.get(10))
+                elif telco.startswith("SKB"):
+                    # 0:종류, 1:상품명, 2:월요금, 3:요즘가족, 4:패밀리, 5:1년미만, 6:2년미만, 7:3년미만, 8:3년이상, 9:경품가이드, 10:현금VAT
+                    kind = _get_str(row, 0, 100)
+                    category = None
+                    product = _get_str(row, 1, 200)
+                    month_fee = _parse_int(row.get(2))
+                    promo1 = _get_str(row, 3, 100)
+                    promo2 = _get_str(row, 4, 100)
+                    promo3 = _get_str(row, 5, 100)
+                    promo4 = _get_str(row, 6, 100)
+                    guide_text = _get_str(row, 9, 400)
+                    voucher_val = None
+                    cash_vat_val = _parse_int(row.get(10))
+                    total_fee_val = None
+                else:  # SKT
+                    # 구조는 SKB와 동일
+                    kind = _get_str(row, 0, 100)
+                    category = None
+                    product = _get_str(row, 1, 200)
+                    month_fee = _parse_int(row.get(2))
+                    promo1 = _get_str(row, 3, 100)
+                    promo2 = _get_str(row, 4, 100)
+                    promo3 = _get_str(row, 5, 100)
+                    promo4 = _get_str(row, 6, 100)
+                    guide_text = _get_str(row, 9, 400)
+                    voucher_val = None
+                    cash_vat_val = _parse_int(row.get(10))
+                    total_fee_val = None
 
-                    guide_text = None
-                    for idx in (40, 41, 42):
-                        cand = row.get(df.columns[idx])
-                        if _looks_like_guide(cand):
-                            guide_text = cand
-                            break
-                    if guide_text is None:
-                        guide_text = row.get(col_guide)
-                else:
-                    guide_text = row.get(col_guide)
-
-                voucher_val = _parse_int(row.get(col_voucher))
-                cash_vat_val = _parse_int(row.get(col_cash_vat))
-                total_fee_val = _parse_int(row.get(col_total))
+                # 상품명/월요금도 비어 있으면 최종적으로 스킵
+                if not product and month_fee is None:
+                    continue
 
                 final_gift = _max_number_in_text(guide_text)
                 cash_val = None
-                if cash_vat_val is not None:
+                if cash_vat_val is not None and final_gift is not None:
                     cash_val = cash_vat_val - (final_gift * 10000)
 
                 pr = PolicyRow(
@@ -167,7 +197,7 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
                     promo2=promo2,
                     promo3=promo3,
                     promo4=promo4,
-                    gift_guide=str(guide_text) if guide_text is not None else None,
+                    gift_guide=guide_text,
                     voucher=voucher_val,
                     cash_vat=cash_vat_val,
                     total_fee=total_fee_val,

@@ -90,17 +90,19 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
                 upper0 = (c0 or "").upper()
 
                 # 통신사 섹션 헤더 감지
-                if c0 and "KT" in upper0:
-                    current_telco = "KT 도매"
-                    continue
-                if c0 and "LG" in upper0:
-                    current_telco = "LG 도매"
+                # 주의: "SKT ..." 안에도 "KT" 문자열이 들어가므로,
+                #       SKT/SKB를 먼저 체크하고, KT는 startswith 로만 판별한다.
+                if c0 and "SKT" in upper0:
+                    current_telco = "SKT 도매"
                     continue
                 if c0 and "SKB" in upper0:
                     current_telco = "SKB 도매"
                     continue
-                if c0 and "SKT" in upper0:
-                    current_telco = "SKT 도매"
+                if c0 and upper0.startswith("KT"):
+                    current_telco = "KT 도매"
+                    continue
+                if c0 and "LG" in upper0:
+                    current_telco = "LG 도매"
                     continue
 
                 if current_telco is None:

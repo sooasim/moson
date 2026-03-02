@@ -62,45 +62,47 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
             except Exception as e:
                 return False, f"엑셀 읽기 실패: {e}", 0
 
-            col_count = len(df.columns)
+            cols = list(df.columns)
 
-            # 두 가지 형식 지원:
-            # 1) 원본 양식: 오른쪽 33~45열(1-based, 인덱스 32~44)에 정책 블록이 있는 45열 이상 파일
-            # 2) 간단 양식: 불필요한 열을 제거하고, 정책 블록만 13열(통신사~합산)로 구성한 파일
-            if col_count >= 45:
-                # 기존(원본) 양식: 오른쪽 블록에서 열 위치 고정
-                col_telco = df.columns[32]
-                col_kind = df.columns[33]
-                col_category = df.columns[34]
-                col_product = df.columns[35]
-                col_month = df.columns[36]
-                col_promo1 = df.columns[37]
-                col_promo2 = df.columns[38]
-                col_promo3 = df.columns[39]
-                col_promo4 = df.columns[40]
-                col_guide = df.columns[41]
-                col_voucher = df.columns[42]
-                col_cash_vat = df.columns[43]
-                col_total = df.columns[44]
-                compact_mode = False
-            else:
-                # 간단 양식: 왼쪽부터 13열만 사용 (통신사~합산 순서 고정)
-                if col_count < 13:
-                    return False, "엑셀 열 개수가 부족합니다 (간단 양식은 최소 13열, 원본 양식은 45열 이상 필요).", 0
-                col_telco = df.columns[0]
-                col_kind = df.columns[1]
-                col_category = df.columns[2]
-                col_product = df.columns[3]
-                col_month = df.columns[4]
-                col_promo1 = df.columns[5]
-                col_promo2 = df.columns[6]
-                col_promo3 = df.columns[7]
-                col_promo4 = df.columns[8]
-                col_guide = df.columns[9]
-                col_voucher = df.columns[10]
-                col_cash_vat = df.columns[11]
-                col_total = df.columns[12]
-                compact_mode = True
+            def _find_col(patterns):
+                """헤더 텍스트에 특정 키워드가 포함된 열을 찾는다."""
+                for c in cols:
+                    name = str(c)
+                    if any(p in name for p in patterns):
+                        return c
+                return None
+
+            # 필수 열 매핑 (헤더 이름 기준)
+            col_telco = _find_col(["통신사", "도매"])
+            col_kind = _find_col(["종류"])
+            col_category = _find_col(["구분"])
+            col_product = _find_col(["상품명"])
+            col_month = _find_col(["월요금", "요금"])
+            col_guide = _find_col(["경품가이드", "경품 가이드"])
+            col_voucher = _find_col(["상품권"])
+            col_cash_vat = _find_col(["현금", "VAT"])
+            col_total = _find_col(["합산", "상품권+현금", "총수수료", "최종수수료"])
+
+            if not (col_telco and col_product and (col_guide or col_cash_vat)):
+                return False, "엑셀 헤더를 인식할 수 없습니다. 통신사/상품명/경품가이드(또는 현금 VAT포함) 열 이름을 확인해 주세요.", 0
+
+            # 프로모션 열은 나머지 열 중에서 순서대로 최대 4개까지 사용
+            essential = {
+                col_telco,
+                col_kind,
+                col_category,
+                col_product,
+                col_month,
+                col_guide,
+                col_voucher,
+                col_cash_vat,
+                col_total,
+            }
+            promo_candidates = [c for c in cols if c not in essential]
+            col_promo1 = promo_candidates[0] if len(promo_candidates) > 0 else None
+            col_promo2 = promo_candidates[1] if len(promo_candidates) > 1 else None
+            col_promo3 = promo_candidates[2] if len(promo_candidates) > 2 else None
+            col_promo4 = promo_candidates[3] if len(promo_candidates) > 3 else None
 
             PolicyRow.query.delete()
             db.session.commit()
@@ -137,39 +139,13 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
                     except Exception:
                         return s
 
-                promo1 = _promo_val(col_promo1)
-                promo2 = _promo_val(col_promo2)
-                promo3 = _promo_val(col_promo3)
-                promo4 = _promo_val(col_promo4) if telco != "LG" else None
+                promo1 = _promo_val(col_promo1) if col_promo1 is not None else None
+                promo2 = _promo_val(col_promo2) if col_promo2 is not None else None
+                promo3 = _promo_val(col_promo3) if col_promo3 is not None else None
+                promo4 = _promo_val(col_promo4) if col_promo4 is not None else None
 
-                is_lg_other = (
-                    not compact_mode
-                    and (telco or "").strip().upper() == "LG"
-                    and ("기타" in (kind or "") or "기타" in (category or ""))
-                )
-                if is_lg_other and len(df.columns) > 42:
-                    def _looks_like_guide(val):
-                        if val is None:
-                            return False
-                        s = str(val).strip()
-                        if s in ("", "nan"):
-                            return False
-                        if s.isdigit():
-                            return False
-                        if not re.search(r"\d", s):
-                            return False
-                        return True
-
-                    guide_text = None
-                    for idx in (40, 41, 42):
-                        cand = row.get(df.columns[idx])
-                        if _looks_like_guide(cand):
-                            guide_text = cand
-                            break
-                    if guide_text is None:
-                        guide_text = row.get(col_guide)
-                else:
-                    guide_text = row.get(col_guide)
+                # LG 기타 특수 처리 등은 제거하고, 경품가이드는 항상 지정된 열에서만 읽는다.
+                guide_text = row.get(col_guide) if col_guide is not None else None
 
                 voucher_val = _parse_int(row.get(col_voucher))
                 cash_vat_val = _parse_int(row.get(col_cash_vat))

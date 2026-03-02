@@ -85,26 +85,32 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
             col_promo3 = None
             col_promo4 = None
 
+            # 길이 제한 헬퍼 (DB 스키마에 맞게 잘라줌)
+            def _clip(val, max_len):
+                if val is None:
+                    return None
+                s = str(val).strip()
+                if not s or s.lower() == "nan":
+                    return None
+                return s[:max_len]
+
             PolicyRow.query.delete()
             db.session.commit()
 
             rows = 0
             for _, row in df.iterrows():
-                telco = (str(row.get(col_telco)).strip()
-                         if row.get(col_telco) is not None and str(row.get(col_telco)).strip() not in ("", "nan")
-                         else None)
+                telco_raw = row.get(col_telco)
+                telco = _clip(telco_raw, 50)
                 if not telco:
                     continue
 
-                kind = (str(row.get(col_kind)).strip()
-                        if row.get(col_kind) is not None and str(row.get(col_kind)).strip() not in ("", "nan")
-                        else None)
-                category = (str(row.get(col_category)).strip()
-                            if row.get(col_category) is not None and str(row.get(col_category)).strip() not in ("", "nan")
-                            else None)
-                product = (str(row.get(col_product)).strip()
-                           if row.get(col_product) is not None and str(row.get(col_product)).strip() not in ("", "nan")
-                           else None)
+                kind = _clip(row.get(col_kind), 100)
+                category = _clip(row.get(col_category), 100)
+                product = _clip(row.get(col_product), 200)
+
+                # 헤더 행(예: 통신사/종류/구분/상품명/월요금 라인)은 스킵
+                if telco in ("통신사", "종류") or product in ("상품명", "월요금"):
+                    continue
 
                 month_fee = _parse_int(row.get(col_month))
 
@@ -112,6 +118,16 @@ def run_policy_import(app, xlsx_path=None, xlsx_file=None):
                 voucher_val = _parse_int(row.get(col_voucher))
                 cash_vat_val = _parse_int(row.get(col_cash_vat))
                 total_fee_val = _parse_int(row.get(col_total))
+
+                # 메모/주의사항 행: 실제 요금/경품/상품권/현금 정보가 없으면 스킵
+                if (
+                    month_fee is None
+                    and voucher_val is None
+                    and cash_vat_val is None
+                    and total_fee_val is None
+                    and (guide_text is None or str(guide_text).strip().lower() in ("", "nan"))
+                ):
+                    continue
 
                 final_gift = _max_number_in_text(guide_text)
                 cash_val = None

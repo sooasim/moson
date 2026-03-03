@@ -143,8 +143,8 @@
   </div>
 
   <div class="card" style="margin-top:16px;">
-    <h2 style="margin:0 0 8px 0;">최근 방문 로그 (24시간)</h2>
-    <div class="muted" style="font-size:12px;margin-bottom:8px;">IP / 봇 여부 / 디바이스 / 경로 기준으로 간단히 확인할 수 있습니다.</div>
+    <h2 style="margin:0 0 8px 0;">최근 방문 로그 (최근 7일)</h2>
+    <div class="muted" style="font-size:12px;margin-bottom:8px;">IP / 봇 여부 / 디바이스 / 경로 기준으로 최근 7일 로그를 최대 300건까지 확인할 수 있습니다.</div>
     <div class="scroll-panel">
       <table>
         <thead>
@@ -186,5 +186,64 @@
         </tbody>
       </table>
     </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2 style="margin:0 0 8px 0; display:flex; align-items:center; justify-content:space-between;">
+      2주일치 방문자 통계
+      <button type="button" id="open-visit-stats" style="border:none;background:#0f766e;color:#ecfdf5;font-size:11px;padding:4px 10px;border-radius:999px;cursor:pointer;">
+        방문자 정보 보기
+      </button>
+    </h2>
+    <div id="visit-stats-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.45); z-index:1000; align-items:center; justify-content:center;">
+      <div style="background:white; border-radius:12px; padding:16px; max-width:520px; width:90%; max-height:80vh; overflow:auto; box-shadow:0 20px 45px rgba(15,23,42,0.35);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+          <h3 style="margin:0; font-size:16px;">최근 2주 방문자 통계 (4시간 기준 유니크)</h3>
+          <button type="button" id="close-visit-stats" style="border:none;background:transparent;font-size:16px;cursor:pointer;">✕</button>
+        </div>
+        <p class="muted" style="font-size:12px; margin:0 0 8px 0;">
+          동일 IP는 4시간 이내 여러 번 방문해도 1회로 계산한 유니크 방문자 수입니다.
+        </p>
+        <div class="scroll-panel">
+          <table>
+            <thead>
+              <tr>
+                <th>날짜</th>
+                <th>총 방문수</th>
+                <th>유니크 방문수(4h)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in stats_14d or [] %}
+              <tr>
+                <td>{{ s.date }}</td>
+                <td>{{ s.total }}</td>
+                <td>{{ s.unique }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        const openBtn = document.getElementById('open-visit-stats');
+        const modal = document.getElementById('visit-stats-modal');
+        const closeBtn = document.getElementById('close-visit-stats');
+        if (!openBtn || !modal || !closeBtn) return;
+        openBtn.addEventListener('click', function () {
+          modal.style.display = 'flex';
+        });
+        closeBtn.addEventListener('click', function () {
+          modal.style.display = 'none';
+        });
+        modal.addEventListener('click', function (e) {
+          if (e.target === modal) {
+            modal.style.display = 'none';
+          }
+        });
+      })();
+    </script>
   </div>
 {% endblock %}

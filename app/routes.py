@@ -16,6 +16,24 @@ from .cloudflare_dns import ensure_dns_record
 
 bp = Blueprint("routes", __name__)
 
+
+def _unique_visits_with_window(rows, window_hours: int = 4) -> int:
+    """동일 IP는 지정 시간(window) 내 여러 번 방문해도 1회로 계산."""
+    if not rows:
+        return 0
+    rows_sorted = sorted(rows, key=lambda v: ((v.ip or "unknown").strip(), v.created_at))
+    last_seen = {}
+    delta = timedelta(hours=window_hours)
+    count = 0
+    for v in rows_sorted:
+        ip = (v.ip or "unknown").strip()
+        ts = v.created_at
+        prev = last_seen.get(ip)
+        if prev is None or ts - prev >= delta:
+            count += 1
+            last_seen[ip] = ts
+    return count
+
 @bp.app_context_processor
 def inject_globals():
     tenant = get_tenant()
@@ -76,6 +94,33 @@ def log_visit():
     try:
         db.session.add(v)
         db.session.commit()
+
+        # 7일보다 오래된 방문 로그는 주기적으로 삭제하여 DB 크기 관리
+        cutoff = datetime.utcnow() - timedelta(days=7)
+        try:
+            VisitLog.query.filter(VisitLog.created_at < cutoff).delete(synchronize_session=False)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # 간단 텍스트 로그 기록 (+ 40MB 이상이면 비우기)
+        try:
+            log_dir = current_app.instance_path
+            os.makedirs(log_dir, exist_ok=True)
+            log_path = os.path.join(log_dir, "visit_log.txt")
+            line = f"{datetime.utcnow().isoformat()} {ip or '-'} {request.method} {request.path}\n"
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(line)
+            max_size = 40 * 1024 * 1024  # 40MB
+            try:
+                if os.path.getsize(log_path) > max_size:
+                    # 파일 크기가 40MB를 넘으면 내용 비우기
+                    open(log_path, "w", encoding="utf-8").close()
+            except OSError:
+                pass
+        except Exception:
+            # 텍스트 로그 기록 실패는 전체 요청에 영향을 주지 않음
+            pass
     except Exception:
         db.session.rollback()
 
@@ -564,6 +609,7 @@ def admin_index():
         now = datetime.utcnow()
         since_24h = now - timedelta(hours=24)
         since_7d = now - timedelta(days=7)
+        since_14d = now - timedelta(days=14)
         since_30d = now - timedelta(days=30)
 
         # 전체 사이트 기준 접속 통계
@@ -571,28 +617,49 @@ def admin_index():
         total_visits = q_all.count()
         total_bots = q_all.filter(VisitLog.is_bot.is_(True)).count()
 
-        q_24h = q_all.filter(VisitLog.created_at >= since_24h)
-        visits_24h = q_24h.count()
-        bots_24h = q_24h.filter(VisitLog.is_bot.is_(True)).count()
-        mobiles_24h = q_24h.filter(VisitLog.is_mobile.is_(True)).count()
-        desktops_24h = q_24h.filter(VisitLog.is_desktop.is_(True)).count()
+        # 24h/7d/30d 방문자: 동일 IP는 4시간 내 여러 번 방문해도 1회로 계산
+        q_24h = q_all.filter(VisitLog.created_at >= since_24h).order_by(VisitLog.created_at.asc())
+        rows_24h = q_24h.all()
+        visits_24h = _unique_visits_with_window(rows_24h, window_hours=4)
 
-        q_7d = q_all.filter(VisitLog.created_at >= since_7d)
-        visits_7d = q_7d.count()
+        bots_24h = sum(1 for v in rows_24h if v.is_bot)
+        mobiles_24h = sum(1 for v in rows_24h if v.is_mobile)
+        desktops_24h = sum(1 for v in rows_24h if v.is_desktop)
 
-        q_30d = q_all.filter(VisitLog.created_at >= since_30d)
-        visits_30d = q_30d.count()
+        q_7d = q_all.filter(VisitLog.created_at >= since_7d).order_by(VisitLog.created_at.asc())
+        rows_7d = q_7d.all()
+        visits_7d = _unique_visits_with_window(rows_7d, window_hours=4)
 
-        from sqlalchemy import func
+        q_30d = q_all.filter(VisitLog.created_at >= since_30d).order_by(VisitLog.created_at.asc())
+        rows_30d = q_30d.all()
+        visits_30d = _unique_visits_with_window(rows_30d, window_hours=4)
 
-        unique_ips_24h = (
-            db.session.query(func.count(func.distinct(VisitLog.ip)))
-            .filter(VisitLog.created_at >= since_24h)
-            .scalar()
-            or 0
+        unique_ips_24h = _unique_visits_with_window(rows_24h, window_hours=4)
+
+        # 최근 방문 로그: 최근 7일치, 최대 300건
+        recent_visits = (
+            q_all.filter(VisitLog.created_at >= since_7d)
+            .order_by(VisitLog.id.desc())
+            .limit(300)
+            .all()
         )
 
-        recent_visits = q_24h.order_by(VisitLog.id.desc()).limit(40).all()
+        # 2주일치 방문자 통계 (일별, 4시간 윈도우 기준 유니크 카운트)
+        q_14d = q_all.filter(VisitLog.created_at >= since_14d).order_by(VisitLog.created_at.asc())
+        rows_14d = q_14d.all()
+        stats_14d = []
+        if rows_14d:
+            from collections import defaultdict
+
+            by_day = defaultdict(list)
+            for v in rows_14d:
+                day = v.created_at.date().isoformat()
+                by_day[day].append(v)
+            for day in sorted(by_day.keys()):
+                day_rows = by_day[day]
+                total = len(day_rows)
+                uniq = _unique_visits_with_window(day_rows, window_hours=4)
+                stats_14d.append({"date": day, "total": total, "unique": uniq})
 
         return render_template(
             "admin/main_dashboard.html",
@@ -609,6 +676,7 @@ def admin_index():
             desktops_24h=desktops_24h,
             unique_ips_24h=unique_ips_24h,
             recent_visits=recent_visits,
+            stats_14d=stats_14d,
         )
 
 

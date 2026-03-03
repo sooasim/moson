@@ -183,7 +183,9 @@ def _policy_summary():
             logical_telco = "KT"
         elif tel.startswith("LG"):
             logical_telco = "LG"
-        elif tel in ("SKT", "SKB"):
+        elif tel.startswith("SKB"):
+            logical_telco = "SKB"
+        elif tel.startswith("SKT"):
             logical_telco = "SKT"
         else:
             continue

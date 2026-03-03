@@ -178,7 +178,8 @@ def _policy_summary():
         .all()
     )
     for r in rows:
-        tel = (r.telco or "").strip().upper()
+        tel_raw = (r.telco or "").strip()
+        tel = tel_raw.upper()
         if tel.startswith("KT"):
             logical_telco = "KT"
         elif tel.startswith("LG"):
@@ -190,12 +191,55 @@ def _policy_summary():
         else:
             continue
 
+        name = (r.product_name or "").strip()
+        kind = (r.kind or "").strip()
+        category = (r.category or "").strip()
+
+        # 속도 추출 (예: 100M, 500M, 1G 등)
+        import re as _re
+
+        m = _re.search(r"\d+\s*(M|G)", name)
+        speed = m.group(0) if m else ""
+
+        # 상품 타입: 인터넷 / 인터넷+TV
+        base_text = (kind + " " + category + " " + name).upper()
+        if any(k in base_text for k in ["TV", "티비", "인+티", "IPTV"]):
+            product_type = "인터넷+TV"
+        else:
+            product_type = "인터넷"
+
+        # 요금제/상품 구성 이름 (베이직, 패밀리, 참쉬운 등)
+        plan_name = ""
+        plan_keywords = [
+            "베이직",
+            "패밀리",
+            "패밀리형",
+            "요즘가족",
+            "이코노미",
+            "실속형",
+            "프리미엄",
+            "참쉬운",
+            "투게더",
+            "인터넷끼리",
+        ]
+        base_kor = kind + " " + category + " " + name
+        for kw in plan_keywords:
+            if kw in base_kor:
+                plan_name = kw
+                break
+        if not plan_name:
+            plan_name = category or kind or ""
+
         cash_val = r.cash if r.cash is not None else 0
         entry = {
             "id": r.id,
-            "kind": (r.kind or "").strip() or "기타",
-            "category": (r.category or "").strip() or "",
-            "product_name": (r.product_name or "").strip() or "-",
+            "telco": logical_telco,
+            "product_type": product_type or "인터넷",
+            "plan_name": plan_name or "",
+            "speed": speed or "",
+            "kind": kind or "기타",
+            "category": category or "",
+            "product_name": name or "-",
             "month_fee": r.month_fee,
             "cash": cash_val,
         }

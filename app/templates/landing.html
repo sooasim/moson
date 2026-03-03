@@ -764,22 +764,22 @@
         function rebuildGroupOptions() {
             const select = document.getElementById('f_group');
             const rows = getRowsForTelco();
-            const kinds = [...new Set(rows.map(r => r.kind).filter(Boolean))].sort();
+            const groups = [...new Set(rows.map(r => r.product_type).filter(Boolean))].sort();
             select.innerHTML = '';
-            if (!kinds.length) {
+            if (!groups.length) {
                 select.innerHTML = '<option value="">정책표에 등록된 상품 구성이 없습니다</option>';
                 document.getElementById('f_product').innerHTML = '<option value="">선택 불가</option>';
                 return;
             }
-            const keepGroup = state.group && kinds.includes(state.group);
-            kinds.forEach((kind) => {
+            const keepGroup = state.group && groups.includes(state.group);
+            groups.forEach((g) => {
                 const opt = document.createElement('option');
-                opt.value = kind;
-                opt.textContent = kind;
-                if (kind === (keepGroup ? state.group : kinds[0])) opt.selected = true;
+                opt.value = g;
+                opt.textContent = g;
+                if (g === (keepGroup ? state.group : groups[0])) opt.selected = true;
                 select.appendChild(opt);
             });
-            state.group = keepGroup ? state.group : kinds[0];
+            state.group = keepGroup ? state.group : groups[0];
             rebuildProductOptions();
         }
 
@@ -805,7 +805,7 @@
                 if (cashInput) cashInput.value = '';
                 return;
             }
-            const summary = [q.telco, q.kind, q.product_name].filter(Boolean).join(' / ');
+            const summary = [q.telco, q.product_type, q.plan_name, q.speed].filter(Boolean).join(' / ');
             line1.textContent = summary || '선택한 조건 요약 정보가 없습니다.';
             if (line2) {
                 const parts = [];
@@ -815,8 +815,8 @@
             }
             if (rowIdInput) rowIdInput.value = q.rowId || '';
             if (telInput) telInput.value = q.telco || '';
-            if (kindInput) kindInput.value = q.kind || '';
-            if (prodInput) prodInput.value = q.product_name || '';
+            if (kindInput) kindInput.value = q.product_type || '';
+            if (prodInput) prodInput.value = q.plan_name ? (q.plan_name + (q.speed ? ' ' + q.speed : '')) : (q.product_name || '');
             if (monthInput) monthInput.value = q.month_fee != null ? q.month_fee : '';
             if (cashInput) cashInput.value = q.cash != null ? q.cash : '';
         }
@@ -824,7 +824,7 @@
         function rebuildProductOptions() {
             const group = document.getElementById('f_group').value;
             const prodSelect = document.getElementById('f_product');
-            let rows = getRowsForTelco().filter(r => r.kind === group);
+            let rows = getRowsForTelco().filter(r => r.product_type === group);
             rows = rows.slice().sort((a, b) => (b.cash != null ? b.cash : 0) - (a.cash != null ? a.cash : 0));
             prodSelect.innerHTML = '';
             if (!rows.length) {
@@ -833,13 +833,14 @@
                 updateQuote();
                 return;
             }
-            const productNameCount = {};
-            rows.forEach(r => { productNameCount[r.product_name] = (productNameCount[r.product_name] || 0) + 1; });
             rows.forEach((row, idx) => {
                 const opt = document.createElement('option');
                 opt.value = row.id;
-                let label = row.product_name;
-                if (row.category && productNameCount[row.product_name] > 1) label += ' (' + row.category + ')';
+                let labelParts = [];
+                if (row.plan_name) labelParts.push(row.plan_name);
+                if (row.speed) labelParts.push(row.speed);
+                let label = labelParts.join(' ');
+                if (!label) label = row.product_name;
                 if (row.month_fee != null) label += ' / 월 ' + Number(row.month_fee).toLocaleString() + '원';
                 opt.textContent = label;
                 if (idx === 0) opt.selected = true;
@@ -884,11 +885,15 @@
                     oCashNote.textContent = '+ 상품권 ' + data.voucher.toLocaleString() + '원 포함 (KT)';
                 }
                 oMonthly.textContent = data.month_fee != null ? '월 ' + data.month_fee.toLocaleString() + '원' : '월 상담확정';
+                const rows = getRowsForTelco();
+                const rowData = rows.find(r => r.id === rowId) || null;
                 state.lastQuote = {
                     rowId: rowId,
-                    telco: data.telco || state.telco,
-                    kind: document.getElementById('f_group').value || '',
-                    product_name: prodSelect.options[prodSelect.selectedIndex] ? prodSelect.options[prodSelect.selectedIndex].text : '',
+                    telco: (rowData && rowData.telco) || data.telco || state.telco,
+                    product_type: (rowData && rowData.product_type) || (document.getElementById('f_group').value || ''),
+                    plan_name: rowData ? (rowData.plan_name || '') : '',
+                    speed: rowData ? (rowData.speed || '') : '',
+                    product_name: rowData ? (rowData.product_name || '') : (prodSelect.options[prodSelect.selectedIndex] ? prodSelect.options[prodSelect.selectedIndex].text : ''),
                     month_fee: data.month_fee,
                     cash: total,
                 };

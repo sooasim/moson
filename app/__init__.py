@@ -36,7 +36,12 @@ def create_app():
     app.config["ADMIN_USERNAME"] = os.getenv("MOSON_ADMIN_USERNAME", "admin")
     app.config["ADMIN_PASSWORD"] = os.getenv("MOSON_ADMIN_PASSWORD", "admin1234")
 
-    # Enable/disable real SMTP sending (fallback prints to console)
+    # Email sending backends
+    # 1) Resend API (우선 사용)
+    app.config["RESEND_API_KEY"] = os.getenv("RESEND_API_KEY")
+    app.config["RESEND_FROM"] = os.getenv("RESEND_FROM")
+
+    # 2) SMTP (로컬/백업용)
     app.config["SMTP_HOST"] = os.getenv("SMTP_HOST")
     app.config["SMTP_PORT"] = int(os.getenv("SMTP_PORT", "587"))
     app.config["SMTP_USER"] = os.getenv("SMTP_USER")

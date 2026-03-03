@@ -989,7 +989,7 @@
             else el.classList.add('hidden');
         }
 
-        async function startBid() {
+        function startBid() {
             const form = document.getElementById('consultForm');
             const nameInput = document.getElementById('f_name');
             const phoneInput = document.getElementById('f_phone');
@@ -1002,34 +1002,38 @@
                 alert('먼저 위에서 현금지원액을 계산해 주세요.');
                 return;
             }
-            const startTs = Date.now();
+
             showBidLoading(true);
             applyQuoteToForm();
+
+            // 상담 신청 폼은 바로 백그라운드 전송 (로딩시간에 영향 주지 않음)
             const fd = new FormData(form);
-            try {
-                await fetch(form.action, { method: 'POST', body: fd });
-            } catch (e) {
-                // ignore
-            }
-            try {
-                const res = await fetch('/api/quote-bids?row_id=' + encodeURIComponent(state.rowId));
-                const data = await res.json();
-                if (!data.ok) {
-                    showBidLoading(false);
-                    alert('입찰 견적 생성 중 오류가 발생했습니다.');
-                    return;
-                }
-                const baseDelay = 2000; // 요청 시작 시점부터 최소 2초 대기
-                const elapsed = Date.now() - startTs;
-                const wait = Math.max(0, baseDelay - elapsed);
-                setTimeout(() => {
-                    showBidLoading(false);
-                    openBidModal(data);
-                }, wait);
-            } catch (e) {
+            fetch(form.action, { method: 'POST', body: fd }).catch(() => {});
+
+            // 견적 입찰 API 호출도 병렬로 수행하되, 최대 2초까지만 대기
+            let bidOk = false;
+            let bidData = null;
+            fetch('/api/quote-bids?row_id=' + encodeURIComponent(state.rowId))
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.ok) {
+                        bidOk = true;
+                        bidData = data;
+                    }
+                })
+                .catch(() => {
+                    // 네트워크 오류인 경우에도 2초 후 알림만 표시
+                });
+
+            // 항상 정확히 2초 후에 로딩을 종료하고, 데이터가 준비됐으면 모달 오픈
+            setTimeout(() => {
                 showBidLoading(false);
-                alert('입찰 견적 생성 중 오류가 발생했습니다.');
-            }
+                if (bidOk && bidData) {
+                    openBidModal(bidData);
+                } else {
+                    alert('입찰 견적 생성이 지연되고 있습니다. 담당자가 별도로 안내드리겠습니다.');
+                }
+            }, 2000);
         }
 
         function openBidModal(data) {

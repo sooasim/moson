@@ -347,10 +347,22 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-400 mb-6 uppercase tracking-widest">01. 통신사 선택</label>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <button onclick="calcState('telco','LG',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition selected-btn shadow-sm">LG U+</button>
-                            <button onclick="calcState('telco','SKT',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition hover:border-emerald-400">SKT/SKB</button>
-                            <button onclick="calcState('telco','KT',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition hover:border-emerald-400">KT Olleh</button>
-                            <button onclick="calcState('telco','ANY',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition hover:border-emerald-400 italic">상관없음</button>
+                            <button onclick="calcState('telco','LG',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition selected-btn shadow-sm flex flex-col items-center gap-2">
+                                <span class="w-10 h-10 rounded-full bg-[#7f75ff] text-white flex items-center justify-center text-sm font-black">LG</span>
+                                <span class="text-[11px] text-slate-600 font-bold">LG U+</span>
+                            </button>
+                            <button onclick="calcState('telco','SKT',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition hover:border-emerald-400 flex flex-col items-center gap-2">
+                                <span class="w-10 h-10 rounded-full bg-[#ef4444] text-white flex items-center justify-center text-sm font-black">SK</span>
+                                <span class="text-[11px] text-slate-600 font-bold">SKT / SKB</span>
+                            </button>
+                            <button onclick="calcState('telco','KT',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition hover:border-emerald-400 flex flex-col items-center gap-2">
+                                <span class="w-10 h-10 rounded-full bg-[#0f172a] text-white flex items-center justify-center text-sm font-black">KT</span>
+                                <span class="text-[11px] text-slate-600 font-bold">KT Olleh</span>
+                            </button>
+                            <button onclick="calcState('telco','ANY',this)" class="p-4 rounded-xl border-2 border-slate-100 text-xs font-black transition hover:border-emerald-400 italic flex flex-col items-center gap-2">
+                                <span class="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-black">ALL</span>
+                                <span class="text-[11px] text-slate-600 font-bold">상관없음</span>
+                            </button>
                         </div>
                     </div>
                     <div class="grid md:grid-cols-2 gap-8">
@@ -918,7 +930,7 @@
                     alert('입찰 견적 생성 중 오류가 발생했습니다.');
                     return;
                 }
-                const baseDelay = 2000 + Math.random() * 1000; // 2~3초
+                const baseDelay = 2000; // 요청 시작 시점부터 최소 2초 대기
                 const elapsed = Date.now() - startTs;
                 const wait = Math.max(0, baseDelay - elapsed);
                 setTimeout(() => {

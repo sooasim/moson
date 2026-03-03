@@ -195,7 +195,7 @@ def _policy_summary():
         kind = (r.kind or "").strip()
         category = (r.category or "").strip()
 
-        # 속도 추출 (예: 100M, 500M, 1G 등)
+        # 속도 추출 (예: 100M, 500M, 1G 등) - 주로 product_name 에서 숫자+M/G 패턴 검색
         import re as _re
 
         m = _re.search(r"\d+\s*(M|G)", name)
@@ -208,9 +208,34 @@ def _policy_summary():
         else:
             product_type = "인터넷"
 
-        # 요금제/상품 구성 이름 (베이직, 패밀리, 참쉬운 등)
+        # KT/LG/SKB/SKT 공통으로, 프로모션 열(promo1~4)까지 포함하여
+        # 요금제/상품 구성 이름(베이직/라이트/에센스/패밀리/정액결합/총액결합/프리미엄/가족/싱글 등)을 탐색
+        promo_texts = " ".join(
+            x
+            for x in [
+                (r.promo1 or ""),
+                (r.promo2 or ""),
+                (r.promo3 or ""),
+                (r.promo4 or ""),
+            ]
+            if x
+        )
+
         plan_name = ""
+        # 우선순위가 높은/세분화된 것들을 앞에 두고 검색
         plan_keywords = [
+            # KT 계열: 속도를 텍스트로 표현한 등급들
+            "에센스",
+            "라이트",
+            "라이트형",
+            "에센스형",
+            # 가족/싱글 등
+            "가족",
+            "싱글",
+            # 결합 타입
+            "정액결합",
+            "총액결합",
+            # 공통 요금제/상품 구성 키워드
             "베이직",
             "패밀리",
             "패밀리형",
@@ -222,15 +247,19 @@ def _policy_summary():
             "투게더",
             "인터넷끼리",
         ]
-        base_kor = kind + " " + category + " " + name
+        # 한글 기준 탐색용 텍스트: 종류/구분/상품명 + 프로모션 열까지 포함
+        base_kor = (kind + " " + category + " " + name + " " + promo_texts)
         for kw in plan_keywords:
-            if kw in base_kor:
+            if kw and kw in base_kor:
                 plan_name = kw
                 break
         if not plan_name:
-            plan_name = category or kind or ""
+            # 종류/구분 중 하나라도 있으면 그 값을, 둘 다 없으면 '기타'로 통일해서
+            # 상품 구성 단계에서 빠지는 행이 없도록 처리
+            plan_name = category or kind or "기타"
 
         cash_val = r.cash if r.cash is not None else 0
+        final_gift_val = r.final_gift if getattr(r, "final_gift", None) is not None else 0
         entry = {
             "id": r.id,
             "telco": logical_telco,
@@ -242,6 +271,7 @@ def _policy_summary():
             "product_name": name or "-",
             "month_fee": r.month_fee,
             "cash": cash_val,
+            "final_gift": final_gift_val,
         }
         result.setdefault(logical_telco, []).append(entry)
 

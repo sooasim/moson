@@ -15,7 +15,7 @@
             <th>수신자</th>
             <th>제목</th>
             <th>본문 (앞부분)</th>
-            <th>오류 메시지</th>
+            <th>오류 / 단계 로그</th>
           </tr>
         </thead>
         <tbody>
@@ -35,8 +35,24 @@
             <td class="muted" style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
               {{ log.body.replace('\n',' ')[:200] }}
             </td>
-            <td class="muted" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              {{ log.error_message or '-' }}
+            <td class="muted" style="max-width:420px;">
+              {% if log.error_message %}
+                <div style="
+                  max-height:220px;
+                  overflow:auto;
+                  padding:6px 8px;
+                  border:1px solid #e5e7eb;
+                  border-radius:4px;
+                  background:#f9fafb;
+                  font-size:12px;
+                  white-space:pre-wrap;
+                  cursor:text;
+                ">
+                  {{ log.error_message }}
+                </div>
+              {% else %}
+                -
+              {% endif %}
             </td>
           </tr>
           {% endfor %}

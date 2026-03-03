@@ -71,8 +71,14 @@ def send_email(to_list: list[str], subject: str, body: str) -> None:
         success = True
         steps.append("DONE")
     except Exception as e:
-        error_message = " / ".join(steps) + f" / ERROR: {e}"
-        print("\n[EMAIL:ERROR]", error_message)
+        # 예외 발생 시: 지금까지 진행된 단계 + ERROR 메시지를 한 줄씩 기록
+        steps.append(f"ERROR: {e}")
+        error_message = "\n".join(steps)
+        print("\n[EMAIL:ERROR]\n" + error_message)
+
+    # 성공한 경우에도 어떤 단계를 거쳤는지 모두 기록
+    if success and not error_message:
+        error_message = "\n".join(steps) if steps else None
 
     log = EmailLog(
         to=", ".join(to_list),

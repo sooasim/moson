@@ -370,15 +370,21 @@
                             </button>
                         </div>
                     </div>
-                    <div class="grid md:grid-cols-2 gap-8">
+                    <div class="grid md:grid-cols-3 gap-6 md:gap-8">
                         <div>
-                            <label class="block text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">02. 상품 구성</label>
-                            <select id="f_group" class="w-full p-5 rounded-xl border-2 border-slate-100 bg-white font-black outline-none focus:border-emerald-400" onchange="onGroupChange()">
+                            <label class="block text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">02. 종류</label>
+                            <select id="f_type" class="w-full p-5 rounded-xl border-2 border-slate-100 bg-white font-black outline-none focus:border-emerald-400" onchange="onTypeChange()">
                                 <option value="">통신사와 연동 중…</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">03. 상품/속도 선택</label>
+                            <label class="block text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">03. 상품 구성</label>
+                            <select id="f_plan" class="w-full p-5 rounded-xl border-2 border-slate-100 bg-white font-black outline-none focus:border-emerald-400" onchange="onPlanChange()">
+                                <option value="">종류를 먼저 선택해주세요</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">04. 상품/속도·금액 선택</label>
                             <select id="f_product" class="w-full p-5 rounded-xl border-2 border-slate-100 bg-white font-black outline-none focus:border-emerald-400" onchange="updateQuote()">
                                 <option value="">상품 구성부터 선택해주세요</option>
                             </select>
@@ -702,18 +708,30 @@
         // 개통 사례 슬라이더
         new Swiper('.caseSwiper', { loop: true, autoplay: { delay: 3000 }, direction: 'vertical' });
 
-        let state = { telco: 'LG', group: '', rowId: null };
+        let state = { telco: 'LG', type: '', plan: '', rowId: null };
 
-        /** 전체 정책에서 현금지원이 가장 큰 행 한 건 찾기 */
+        /** 전체 정책에서 '최종 경품 금액'이 가장 큰 행 한 건 찾기
+         *  (final_gift가 없으면 0으로 보고, 동일하면 현금지원(cash) 큰 쪽 선택)
+         */
         function findMaxCashRow() {
             let best = null;
             for (const telco of ['KT', 'LG', 'SKT', 'SKB']) {
                 const list = POLICY[telco];
                 if (!Array.isArray(list)) continue;
                 for (const r of list) {
+                    const gift = r.final_gift != null ? r.final_gift : 0;
                     const cash = r.cash != null ? r.cash : 0;
-                    if (best === null || cash > (best.cash != null ? best.cash : 0))
+                    if (best === null) {
                         best = { ...r, _telco: telco };
+                        best._gift = gift;
+                    } else {
+                        const bestGift = best._gift != null ? best._gift : 0;
+                        const bestCash = best.cash != null ? best.cash : 0;
+                        if (gift > bestGift || (gift === bestGift && cash > bestCash)) {
+                            best = { ...r, _telco: telco };
+                            best._gift = gift;
+                        }
+                    }
                 }
             }
             return best;
@@ -724,7 +742,8 @@
             const maxRow = findMaxCashRow();
             if (maxRow) {
                 state.telco = maxRow._telco;
-                state.group = maxRow.kind || '';
+                state.type = maxRow.product_type || '';
+                state.plan = maxRow.plan_name || '';
                 document.querySelectorAll('button').forEach(btn => {
                     const onclick = btn.getAttribute('onclick') || '';
                     if (onclick.indexOf("calcState('telco'") !== 0) return;
@@ -732,7 +751,7 @@
                     if (m && m[1] === state.telco) { btn.classList.add('selected-btn'); } else { btn.classList.remove('selected-btn'); }
                 });
             }
-            rebuildGroupOptions();
+            rebuildTypeOptions();
         }
 
         function calcState(k, v, el) {
@@ -741,14 +760,17 @@
                 el.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('selected-btn'));
                 el.classList.add('selected-btn');
             }
-            rebuildGroupOptions();
+            // 통신사를 바꾸면 종류/상품구성/상품 선택을 다시 세팅
+            state.type = '';
+            state.plan = '';
+            rebuildTypeOptions();
         }
 
         function currentTelcoKey() {
             return state.telco === 'ANY' ? 'ANY' : state.telco;
         }
 
-        /** 선택 통신사에 해당하는 정책 행 목록 (SKT면 SKT+SKB 통합) */
+        /** 선택 통신사에 해당하는 정책 행 목록 */
         function getRowsForTelco() {
             const telKey = currentTelcoKey();
             if (telKey === 'ANY') {
@@ -761,25 +783,69 @@
             return Array.isArray(POLICY[telKey]) ? POLICY[telKey] : [];
         }
 
-        function rebuildGroupOptions() {
-            const select = document.getElementById('f_group');
+        function rebuildTypeOptions() {
+            const typeSelect = document.getElementById('f_type');
+            const planSelect = document.getElementById('f_plan');
+            const prodSelect = document.getElementById('f_product');
             const rows = getRowsForTelco();
-            const groups = [...new Set(rows.map(r => r.product_type).filter(Boolean))].sort();
-            select.innerHTML = '';
-            if (!groups.length) {
-                select.innerHTML = '<option value="">정책표에 등록된 상품 구성이 없습니다</option>';
-                document.getElementById('f_product').innerHTML = '<option value="">선택 불가</option>';
+            const types = [...new Set(rows.map(r => r.product_type || '인터넷'))].sort();
+
+            typeSelect.innerHTML = '';
+            planSelect.innerHTML = '<option value="">종류를 먼저 선택해주세요</option>';
+            prodSelect.innerHTML = '<option value="">상품 구성부터 선택해주세요</option>';
+
+            if (!types.length) {
+                typeSelect.innerHTML = '<option value="">정책표에 등록된 종류가 없습니다</option>';
                 return;
             }
-            const keepGroup = state.group && groups.includes(state.group);
-            groups.forEach((g) => {
+
+            const keepType = state.type && types.includes(state.type);
+            types.forEach((t) => {
                 const opt = document.createElement('option');
-                opt.value = g;
-                opt.textContent = g;
-                if (g === (keepGroup ? state.group : groups[0])) opt.selected = true;
-                select.appendChild(opt);
+                opt.value = t;
+                opt.textContent = t;
+                if (t === (keepType ? state.type : types[0])) opt.selected = true;
+                typeSelect.appendChild(opt);
             });
-            state.group = keepGroup ? state.group : groups[0];
+            state.type = keepType ? state.type : types[0];
+            rebuildPlanOptions();
+        }
+
+        function rebuildPlanOptions() {
+            const type = document.getElementById('f_type').value;
+            const planSelect = document.getElementById('f_plan');
+            const prodSelect = document.getElementById('f_product');
+            const rows = getRowsForTelco().filter(r => (r.product_type || '인터넷') === type);
+
+            planSelect.innerHTML = '';
+            prodSelect.innerHTML = '<option value="">상품 구성부터 선택해주세요</option>';
+
+            if (!rows.length) {
+                planSelect.innerHTML = '<option value="">해당 종류의 상품 구성이 없습니다</option>';
+                state.plan = '';
+                state.rowId = null;
+                updateQuote();
+                return;
+            }
+
+            const plans = [...new Set(rows.map(r => (r.plan_name && r.plan_name.trim()) ? r.plan_name.trim() : '기타'))].sort();
+            if (!plans.length) {
+                planSelect.innerHTML = '<option value="">상품 구성 정보가 없습니다</option>';
+                state.plan = '';
+                state.rowId = null;
+                updateQuote();
+                return;
+            }
+
+            const keepPlan = state.plan && plans.includes(state.plan);
+            plans.forEach((p) => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                if (p === (keepPlan ? state.plan : plans[0])) opt.selected = true;
+                planSelect.appendChild(opt);
+            });
+            state.plan = keepPlan ? state.plan : plans[0];
             rebuildProductOptions();
         }
 
@@ -822,9 +888,16 @@
         }
 
         function rebuildProductOptions() {
-            const group = document.getElementById('f_group').value;
+            const type = document.getElementById('f_type').value;
+            const plan = document.getElementById('f_plan').value;
             const prodSelect = document.getElementById('f_product');
-            let rows = getRowsForTelco().filter(r => r.product_type === group);
+            let rows = getRowsForTelco().filter(r => {
+                const rType = r.product_type || '인터넷';
+                const rPlan = (r.plan_name && r.plan_name.trim()) ? r.plan_name.trim() : '기타';
+                if (type && rType !== type) return false;
+                if (plan && rPlan !== plan) return false;
+                return true;
+            });
             rows = rows.slice().sort((a, b) => (b.cash != null ? b.cash : 0) - (a.cash != null ? a.cash : 0));
             prodSelect.innerHTML = '';
             if (!rows.length) {
@@ -850,8 +923,14 @@
             updateQuote();
         }
 
-        function onGroupChange() {
-            state.group = document.getElementById('f_group').value;
+        function onTypeChange() {
+            state.type = document.getElementById('f_type').value;
+            state.plan = '';
+            rebuildPlanOptions();
+        }
+
+        function onPlanChange() {
+            state.plan = document.getElementById('f_plan').value;
             rebuildProductOptions();
         }
 
@@ -890,8 +969,8 @@
                 state.lastQuote = {
                     rowId: rowId,
                     telco: (rowData && rowData.telco) || data.telco || state.telco,
-                    product_type: (rowData && rowData.product_type) || (document.getElementById('f_group').value || ''),
-                    plan_name: rowData ? (rowData.plan_name || '') : '',
+                    product_type: (rowData && rowData.product_type) || (document.getElementById('f_type').value || ''),
+                    plan_name: rowData ? (rowData.plan_name || (document.getElementById('f_plan').value || '')) : (document.getElementById('f_plan').value || ''),
                     speed: rowData ? (rowData.speed || '') : '',
                     product_name: rowData ? (rowData.product_name || '') : (prodSelect.options[prodSelect.selectedIndex] ? prodSelect.options[prodSelect.selectedIndex].text : ''),
                     month_fee: data.month_fee,

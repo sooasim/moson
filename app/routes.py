@@ -478,12 +478,35 @@ def partner_apply():
         bank_name = (request.form.get("bank_name") or "").strip() or None
         bank_account = (request.form.get("bank_account") or "").strip() or None
 
-        # 간단한 서브도메인 형식 검증
+        # 필드별 검증
         import re
 
+        errors = []
         if not re.fullmatch(r"[a-z0-9-]{2,32}", subdomain or ""):
-            flash("서브도메인은 영문 소문자/숫자/하이픈 2~32자만 가능합니다.", "error")
-            return render_template("partner_apply.html", title="부업 파트너 신청")
+            errors.append("서브도메인은 영문 소문자/숫자/하이픈 2~32자만 가능합니다.")
+        if not company_name:
+            errors.append("업체명을 입력해 주세요.")
+        if not phone:
+            errors.append("전화번호를 입력해 주세요.")
+        if not email:
+            errors.append("이메일을 입력해 주세요.")
+        elif "@" not in email:
+            errors.append("이메일 형식이 올바르지 않습니다.")
+
+        if errors:
+            for msg in errors:
+                flash(msg, "error")
+            # 사용자가 입력한 값 다시 보여주기
+            form_data = {
+                "subdomain": subdomain,
+                "company_name": company_name,
+                "representative": representative or "",
+                "phone": phone,
+                "email": email,
+                "bank_name": bank_name or "",
+                "bank_account": bank_account or "",
+            }
+            return render_template("partner_apply.html", title="부업 파트너 신청", form_data=form_data)
 
         app_row = ResellerApplication(
             subdomain=subdomain,
@@ -497,10 +520,40 @@ def partner_apply():
         db.session.add(app_row)
         db.session.commit()
 
-        flash("부업 파트너 신청이 접수되었습니다. 운영진이 검토 후 연락드립니다.")
+        # 메인 어드민 + 신청자에게 이메일 발송
+        moson_email = current_app.config.get("MOSON_EMAIL")
+        to_list = []
+        if moson_email:
+            to_list.append(moson_email)
+        if email:
+            to_list.append(email)
+
+        subject = f"[MOSON] 신규 부업 파트너 신청 - {company_name or subdomain}"
+        body_lines = [
+            "부업 파트너(대리점) 신청이 접수되었습니다.",
+            "",
+            f"대리점 주소(서브도메인): {subdomain}",
+            f"업체명: {company_name}",
+            f"대표자: {representative or '-'}",
+            f"전화번호: {phone}",
+            f"이메일: {email}",
+            "",
+            f"은행명: {bank_name or '-'}",
+            f"계좌번호: {bank_account or '-'}",
+            "",
+            f"신청 ID: {app_row.id}",
+            f"신청 시각(UTC): {app_row.created_at.strftime('%Y-%m-%d %H:%M:%S')}",
+        ]
+        try:
+            send_email(to_list=to_list, subject=subject, body="\n".join(body_lines))
+        except Exception:
+            # 이메일 오류가 있어도 신청 자체는 유지
+            pass
+
+        flash("부업 파트너 신청이 접수되었습니다. 담당자가 내용을 확인 후 연락드리겠습니다.")
         return redirect(url_for("routes.landing", partner="1"))
 
-    return render_template("partner_apply.html", title="부업 파트너 신청")
+    return render_template("partner_apply.html", title="부업 파트너 신청", form_data=None)
 
 @bp.get("/favicon.ico")
 def favicon():
@@ -681,6 +734,7 @@ def admin_index():
             .all()
         )
         resellers = Reseller.query.order_by(Reseller.id.desc()).all()
+        pending_apps_count = ResellerApplication.query.filter_by(processed_at=None).count()
 
         now = datetime.utcnow()
         since_24h = now - timedelta(hours=24)
@@ -742,6 +796,7 @@ def admin_index():
             title="메인 어드민",
             consults=consults,
             resellers=resellers,
+            pending_apps_count=pending_apps_count,
             total_visits=total_visits,
             total_bots=total_bots,
             visits_24h=visits_24h,

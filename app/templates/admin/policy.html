@@ -8,8 +8,8 @@
   /* 정책표 페이지: PC 화면 넓이에 가득 차게 반응형 */
   .policy-page { width: 100%; }
   .policy-page .card { width: 100%; max-width: 100%; }
-  .policy-page .card-body { width: 100%; padding: 8px 10px 10px; }
-  .policy-page .card-header { padding: 8px 10px 6px; }
+  .policy-page .card-body { width: 100%; padding: 8px 8px 10px; } /* 좌우 여백 ~20% 축소 */
+  .policy-page .card-header { padding: 8px 8px 6px; }
   .policy-page .scroll-panel { width: 100%; max-width: 100%; max-height: min(70vh, 600px); overflow: auto; }
   .policy-page .table { width: 100%; table-layout: auto; border-collapse: collapse; }
   .policy-page .table thead th {
@@ -20,7 +20,7 @@
     backdrop-filter: blur(8px);
   }
   .policy-page .table th, .policy-page .table td {
-    padding: 6px 7px;
+    padding: 6px 5px; /* 좌우 폭 약 20% 축소 */
     font-size: 13px;
     white-space: normal;       /* PC에서 가로폭 줄이기 위해 줄바꿈 허용 */
     word-break: keep-all;      /* 한글 단어 단위로 줄바꿈 */
@@ -30,12 +30,12 @@
     .policy-page .scroll-panel { max-height: min(72vh, 700px); }
   }
   @media (max-width: 1024px) {
-    .policy-page .table th, .policy-page .table td { padding: 4px 6px; font-size: 12px; }
-    .policy-page .card-body { padding: 7px 8px 9px; }
+    .policy-page .table th, .policy-page .table td { padding: 4px 5px; font-size: 12px; }
+    .policy-page .card-body { padding: 7px 6px 9px; }
   }
   @media (max-width: 768px) {
     .policy-page .scroll-panel { max-height: 62vh; }
-    .policy-page .table th, .policy-page .table td { padding: 4px 4px; font-size: 11px; }
+    .policy-page .table th, .policy-page .table td { padding: 4px 3px; font-size: 11px; }
     .policy-page .card { border-radius: 14px; }
     .policy-page .card-body { padding: 8px 8px 10px; }
     .policy-page .card-header { padding: 8px 10px 6px; }
@@ -47,8 +47,8 @@
     }
   }
   @media (max-width: 640px) {
-    .policy-page .table th, .policy-page .table td { padding: 3px 4px; font-size: 10px; }
-    .policy-page .table { min-width: 840px; }
+    .policy-page .table th, .policy-page .table td { padding: 3px 3px; font-size: 10px; }
+    .policy-page .table { min-width: 672px; }
     .policy-page .card { margin-top: 12px !important; }
   }
   /* 항목별 직관 색상: 경품가이드(붉은색), 상품권(초록), 현금VAT포함(주황), 상품권+현금(파랑), 현금(노랑/골드), 리셀러비용(핑크) */
@@ -141,24 +141,24 @@
         <thead>
           <tr>
             <th style="width:70px;">ID</th>
-            <th style="min-width:90px;">종류</th>
-            <th style="min-width:90px;">구분</th>
-            <th style="min-width:180px;">상품명</th>
-            <th style="min-width:90px;">월요금</th>
-            <th style="min-width:120px;">정액결합<br>모바일 37K↑</th>
-            <th style="min-width:120px;">총액결합<br>모바일 65K↑</th>
-            <th style="min-width:110px;">프리미엄가족</th>
-            <th style="min-width:110px;">프리미엄싱글</th>
-            <th class="policy-col-guide" style="min-width:180px;">경품가이드</th>
-            <th class="policy-col-voucher" style="min-width:90px;">상품권</th>
-            <th style="min-width:120px;">최종 경품금액<br>(원)</th>
-            <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            <th style="min-width:72px;">종류</th>
+            <th style="min-width:72px;">구분</th>
+            <th style="min-width:144px;">상품명</th>
+            <th style="min-width:72px;">월요금</th>
+            <th style="min-width:96px;">정액결합<br>모바일 37K↑</th>
+            <th style="min-width:96px;">총액결합<br>모바일 65K↑</th>
+            <th style="min-width:88px;">프리미엄가족</th>
+            <th style="min-width:88px;">프리미엄싱글</th>
+            <th class="policy-col-guide" style="min-width:144px;">경품가이드</th>
+            <th class="policy-col-voucher" style="min-width:72px;">상품권</th>
+            <th style="min-width:96px;">최종 경품금액<br>(원)</th>
+            <th class="policy-col-reseller" style="min-width:88px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th class="policy-col-end-amount" style="min-width:140px;">END금액<br>(최종경품+리셀러)</th>
-            <th class="policy-col-end-cash" style="min-width:140px;">END현금<br>(현금-리셀러)</th>
-            <th class="policy-col-cash" style="min-width:100px;">현금</th>
-            <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
-            <th class="policy-col-total" style="min-width:140px;">최종수수료<br>(상품권+현금 합산)</th>
+            <th class="policy-col-end-amount" style="min-width:112px;">END금액<br>(최종경품+리셀러)</th>
+            <th class="policy-col-end-cash" style="min-width:112px;">END현금<br>(현금-리셀러)</th>
+            <th class="policy-col-cash" style="min-width:80px;">현금</th>
+            <th class="policy-col-cash-vat" style="min-width:96px;">현금<br>VAT포함</th>
+            <th class="policy-col-total" style="min-width:112px;">최종수수료<br>(상품권+현금 합산)</th>
             {% endif %}
             <th style="width:60px;">저장</th>
           </tr>
@@ -258,23 +258,23 @@
         <thead>
           <tr>
             <th style="width:70px;">ID</th>
-            <th style="min-width:90px;">종류</th>
-            <th style="min-width:90px;">구분</th>
-            <th style="min-width:180px;">상품명</th>
-            <th style="min-width:90px;">월요금</th>
-            <th style="min-width:90px;">참쉬운</th>
-            <th style="min-width:90px;">투게더</th>
-            <th style="min-width:110px;">인터넷끼리</th>
-            <th class="policy-col-guide" style="min-width:180px;">경품가이드</th>
-            <th style="min-width:120px;">최종 경품금액<br>(원)</th>
-            <th class="policy-col-voucher" style="min-width:90px;">상품권</th>
-            <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            <th style="min-width:72px;">종류</th>
+            <th style="min-width:72px;">구분</th>
+            <th style="min-width:144px;">상품명</th>
+            <th style="min-width:72px;">월요금</th>
+            <th style="min-width:72px;">참쉬운</th>
+            <th style="min-width:72px;">투게더</th>
+            <th style="min-width:88px;">인터넷끼리</th>
+            <th class="policy-col-guide" style="min-width:144px;">경품가이드</th>
+            <th style="min-width:96px;">최종 경품금액<br>(원)</th>
+            <th class="policy-col-voucher" style="min-width:72px;">상품권</th>
+            <th class="policy-col-reseller" style="min-width:88px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th class="policy-col-end-amount" style="min-width:140px;">END금액<br>(최종경품+리셀러)</th>
-            <th class="policy-col-end-cash" style="min-width:140px;">END현금<br>(현금-리셀러)</th>
-            <th class="policy-col-cash" style="min-width:100px;">현금</th>
-            <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
-            <th class="policy-col-total" style="min-width:140px;">상품권+현금<br>VAT포함</th>
+            <th class="policy-col-end-amount" style="min-width:112px;">END금액<br>(최종경품+리셀러)</th>
+            <th class="policy-col-end-cash" style="min-width:112px;">END현금<br>(현금-리셀러)</th>
+            <th class="policy-col-cash" style="min-width:80px;">현금</th>
+            <th class="policy-col-cash-vat" style="min-width:96px;">현금<br>VAT포함</th>
+            <th class="policy-col-total" style="min-width:112px;">상품권+현금<br>VAT포함</th>
             {% endif %}
             <th style="width:60px;">저장</th>
           </tr>
@@ -374,23 +374,23 @@
         <thead>
           <tr>
             <th style="width:70px;">ID</th>
-            <th style="min-width:90px;">종류</th>
-            <th style="min-width:180px;">상품명</th>
-            <th style="min-width:90px;">월요금</th>
-            <th style="min-width:110px;">요즘가족<br>(알뜰한)</th>
-            <th style="min-width:90px;">패밀리</th>
-            <th style="min-width:130px;">온가족할인(30년↑)<br>1년 미만</th>
-            <th style="min-width:90px;">2년 미만</th>
-            <th style="min-width:90px;">3년 미만</th>
-            <th style="min-width:90px;">3년 이상</th>
-            <th class="policy-col-guide" style="min-width:180px;">경품가이드</th>
-            <th style="min-width:120px;">최종 경품금액<br>(원)</th>
-            <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            <th style="min-width:72px;">종류</th>
+            <th style="min-width:144px;">상품명</th>
+            <th style="min-width:72px;">월요금</th>
+            <th style="min-width:88px;">요즘가족<br>(알뜰한)</th>
+            <th style="min-width:72px;">패밀리</th>
+            <th style="min-width:104px;">온가족할인(30년↑)<br>1년 미만</th>
+            <th style="min-width:72px;">2년 미만</th>
+            <th style="min-width:72px;">3년 미만</th>
+            <th style="min-width:72px;">3년 이상</th>
+            <th class="policy-col-guide" style="min-width:144px;">경품가이드</th>
+            <th style="min-width:96px;">최종 경품금액<br>(원)</th>
+            <th class="policy-col-reseller" style="min-width:88px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th class="policy-col-end-amount" style="min-width:140px;">END금액<br>(최종경품+리셀러)</th>
-            <th class="policy-col-end-cash" style="min-width:140px;">END현금<br>(현금-리셀러)</th>
-            <th class="policy-col-cash" style="min-width:100px;">현금</th>
-            <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT포함</th>
+            <th class="policy-col-end-amount" style="min-width:112px;">END금액<br>(최종경품+리셀러)</th>
+            <th class="policy-col-end-cash" style="min-width:112px;">END현금<br>(현금-리셀러)</th>
+            <th class="policy-col-cash" style="min-width:80px;">현금</th>
+            <th class="policy-col-cash-vat" style="min-width:96px;">현금<br>VAT포함</th>
             {% endif %}
             <th style="width:60px;">저장</th>
           </tr>
@@ -478,23 +478,23 @@
         <thead>
           <tr>
             <th style="width:70px;">ID</th>
-            <th style="min-width:90px;">종류</th>
-            <th style="min-width:180px;">상품명</th>
-            <th style="min-width:90px;">월요금</th>
-            <th style="min-width:90px;">요즘가족</th>
-            <th style="min-width:90px;">패밀리</th>
-            <th style="min-width:130px;">온가족할인(30년↑)<br>1년 미만</th>
-            <th style="min-width:90px;">2년 미만</th>
-            <th style="min-width:90px;">3년 미만</th>
-            <th style="min-width:90px;">3년 이상</th>
-            <th class="policy-col-guide" style="min-width:180px;">경품가이드</th>
-            <th style="min-width:120px;">최종 경품금액<br>(원)</th>
-            <th class="policy-col-reseller" style="min-width:110px;">리셀러비용<br>(현금의 25%)</th>
+            <th style="min-width:72px;">종류</th>
+            <th style="min-width:144px;">상품명</th>
+            <th style="min-width:72px;">월요금</th>
+            <th style="min-width:72px;">요즘가족</th>
+            <th style="min-width:72px;">패밀리</th>
+            <th style="min-width:104px;">온가족할인(30년↑)<br>1년 미만</th>
+            <th style="min-width:72px;">2년 미만</th>
+            <th style="min-width:72px;">3년 미만</th>
+            <th style="min-width:72px;">3년 이상</th>
+            <th class="policy-col-guide" style="min-width:144px;">경품가이드</th>
+            <th style="min-width:96px;">최종 경품금액<br>(원)</th>
+            <th class="policy-col-reseller" style="min-width:88px;">리셀러비용<br>(현금의 25%)</th>
             {% if not is_reseller %}
-            <th class="policy-col-end-amount" style="min-width:140px;">END금액<br>(최종경품+리셀러)</th>
-            <th class="policy-col-end-cash" style="min-width:140px;">END현금<br>(현금-리셀러)</th>
-            <th class="policy-col-cash" style="min-width:100px;">현금</th>
-            <th class="policy-col-cash-vat" style="min-width:120px;">현금<br>VAT별도</th>
+            <th class="policy-col-end-amount" style="min-width:112px;">END금액<br>(최종경품+리셀러)</th>
+            <th class="policy-col-end-cash" style="min-width:112px;">END현금<br>(현금-리셀러)</th>
+            <th class="policy-col-cash" style="min-width:80px;">현금</th>
+            <th class="policy-col-cash-vat" style="min-width:96px;">현금<br>VAT별도</th>
             {% endif %}
             <th style="width:60px;">저장</th>
           </tr>
@@ -577,13 +577,13 @@
         <thead>
           <tr>
             <th style="width:80px;">ID</th>
-            <th style="min-width:120px;">통신사</th>
-            <th style="min-width:200px;">상품명</th>
-            <th style="min-width:80px;">속도</th>
-            <th class="policy-col-guide" style="min-width:260px;">경품가이드</th>
-            <th style="min-width:140px;">최종 경품금액<br>(원)</th>
-            <th class="policy-col-cash" style="min-width:130px;">현금</th>
-            <th class="policy-col-cash-vat" style="min-width:150px;">현금 VAT포함</th>
+            <th style="min-width:96px;">통신사</th>
+            <th style="min-width:160px;">상품명</th>
+            <th style="min-width:64px;">속도</th>
+            <th class="policy-col-guide" style="min-width:208px;">경품가이드</th>
+            <th style="min-width:112px;">최종 경품금액<br>(원)</th>
+            <th class="policy-col-cash" style="min-width:104px;">현금</th>
+            <th class="policy-col-cash-vat" style="min-width:120px;">현금 VAT포함</th>
             <th style="width:70px;">저장</th>
           </tr>
         </thead>

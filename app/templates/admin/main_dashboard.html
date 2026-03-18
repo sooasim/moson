@@ -17,6 +17,44 @@
     .status-pill[data-status="정산대기"] { background:#fef9c3; color:#92400e; }
     .status-pill[data-status="정산완료"] { background:#bbf7d0; color:#166534; }
     .status-pill[data-status="반려"] { background:#fee2e2; color:#b91c1c; }
+    @keyframes partner-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+      50% { transform: scale(1.02); box-shadow: 0 0 28px 6px rgba(239, 68, 68, 0.3); }
+    }
+    @keyframes partner-dot {
+      from { opacity: 0.55; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1.2); }
+    }
+    .partner-alert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      border-radius: 16px;
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      background: linear-gradient(145deg, #fff1f2 0%, #fecdd3 45%, #fda4af 100%);
+      color: #7f1d1d;
+      border: 3px solid #ef4444;
+      animation: partner-pulse 1.5s ease-in-out infinite;
+      line-height: 1.2;
+    }
+    .partner-alert-badge .partner-dot {
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #dc2626;
+      box-shadow: 0 0 10px #ef4444;
+      animation: partner-dot 0.9s ease-in-out infinite alternate;
+    }
+    .partner-none-line {
+      font-size: 13px;
+      font-weight: 700;
+      color: #64748b;
+      margin-top: 6px;
+    }
   </style>
   {% if not config.get('DB_HEALTH_OK', True) %}
     <div class="card" style="margin-top:16px;margin-bottom:16px;border-color:rgba(239,68,68,.5);background:rgba(127,29,29,.35);">
@@ -147,23 +185,29 @@
   </div>
 
   <div class="card" style="margin-top:16px;">
-    <h2 style="margin:0 0 8px 0; display:flex; align-items:center; justify-content:space-between;">
-      대리점 관리하기
-      {% if pending_apps_count and pending_apps_count > 0 %}
-      <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;background:#fee2e2;color:#b91c1c;">
-        신규 부업 신청 {{ pending_apps_count }}건
-      </span>
-      {% endif %}
-    </h2>
+    <h2 style="margin:0 0 10px 0;">대리점 관리하기</h2>
+    {% if pending_apps_count and pending_apps_count > 0 %}
+    <div style="margin-bottom:14px;">
+      <div class="partner-alert-badge" role="status" aria-live="polite">
+        <span class="partner-dot" aria-hidden="true"></span>
+        <span>신규 부업 신청 <strong style="font-size:1.15em;">{{ pending_apps_count }}</strong>건 · 지금 확인</span>
+      </div>
+    </div>
+    {% else %}
+    <div class="partner-none-line">✓ 신규 부업 신청 대기 없음 · 페이지 열 때마다 DB 기준으로 갱신됩니다.</div>
+    {% endif %}
     <p class="muted" style="margin:0 0 12px 0;font-size:12px;line-height:1.6;">
       대리점 생성, 정보 수정, 정산 계좌 관리는 <b>대리점 관리</b> 메뉴에서 한 번에 처리할 수 있습니다.<br/>
       {% if pending_apps_count and pending_apps_count > 0 %}
-        메인 페이지에서 접수된 <b>부업 파트너 신청 {{ pending_apps_count }}건</b>이 대기 중입니다. 아래 버튼을 눌러 확인 후 대리점으로 등록해 주세요.
+        아직 <b>대리점으로 등록되지 않은</b> 서브도메인 신청이 위 건수만큼 있습니다. <b>대리점 생성</b>에서 목록을 확인해 주세요.
       {% else %}
         아래 버튼을 누르면 대리점 목록 페이지로 이동합니다.
       {% endif %}
     </p>
     <a href="{{ url_for('routes.admin_reseller_list') }}" class="pill" style="text-decoration:none;font-size:12px;display:inline-flex;margin-top:4px;">대리점 관리 열기</a>
+    {% if pending_apps_count and pending_apps_count > 0 %}
+    <a href="{{ url_for('routes.admin_reseller_new') }}" class="pill" style="text-decoration:none;font-size:13px;display:inline-flex;margin-top:8px;margin-left:8px;font-weight:800;background:rgba(239,68,68,.2);border-color:#ef4444;color:#fecaca;">부업 신청 처리하기 →</a>
+    {% endif %}
   </div>
 
   <div class="card" style="margin-top:16px;">

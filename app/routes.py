@@ -17,6 +17,27 @@ from .cloudflare_dns import ensure_dns_record
 bp = Blueprint("routes", __name__)
 
 
+def _pending_partner_applications_open() -> list:
+    """부업 신청 중 아직 대리점으로 등록되지 않은 건만 (processed_at 미처리 + 동일 서브도메인 리셀러 없음)."""
+    apps = (
+        ResellerApplication.query.filter(ResellerApplication.processed_at.is_(None))
+        .order_by(ResellerApplication.id.desc())
+        .all()
+    )
+    out = []
+    for a in apps:
+        sub = (a.subdomain or "").strip().lower()
+        if not sub:
+            continue
+        if Reseller.query.filter(
+            db.func.lower(Reseller.subdomain) == sub,
+            Reseller.deleted_at.is_(None),
+        ).first():
+            continue
+        out.append(a)
+    return out
+
+
 def _unique_visits_with_window(rows, window_hours: int = 4) -> int:
     """동일 IP는 지정 시간(window) 내 여러 번 방문해도 1회로 계산."""
     if not rows:
@@ -756,7 +777,8 @@ def admin_index():
             .all()
         )
         resellers = Reseller.query.order_by(Reseller.id.desc()).all()
-        pending_apps_count = ResellerApplication.query.filter_by(processed_at=None).count()
+        pending_apps_open = _pending_partner_applications_open()
+        pending_apps_count = len(pending_apps_open)
 
         now = datetime.utcnow()
         since_24h = now - timedelta(hours=24)
@@ -1617,12 +1639,8 @@ def admin_reseller_new():
 
         return redirect(url_for("routes.admin_index"))
 
-    # GET: 신청 대기 중인 부업 파트너 목록
-    pending_apps = (
-        ResellerApplication.query.filter_by(processed_at=None)
-        .order_by(ResellerApplication.id.desc())
-        .all()
-    )
+    # GET: 신청 대기 중인 부업 파트너 목록 (이미 대리점 등록된 서브도메인은 제외)
+    pending_apps = _pending_partner_applications_open()
 
     prefill = None
     app_id = request.args.get("app_id")

@@ -1,0 +1,71 @@
+{% extends "admin/base.html" %}
+{% block content %}
+  <div class="card" style="margin-top:16px;">
+    <h2 style="margin:0 0 8px 0;">리셀러 관리 (부업 파트너 신청)</h2>
+    <p class="muted" style="margin:0 0 16px 0;font-size:12px;line-height:1.6;">
+      본 서브페이지를 통해 접수된 신청은 <b>본사 DB와 동일</b>하게 저장됩니다. 본사 어드민 「대리점 관리」에서도 동일 목록으로 관리·등록할 수 있습니다.<br/>
+      <b>승인</b>: 내부 검토 완료 표시 · <b>목록에서 제거</b>: 이 화면에서만 숨김 (본사에서는 계속 조회 가능)
+    </p>
+    {% if not applications %}
+    <p class="muted" style="font-size:14px;">표시할 신청이 없습니다.</p>
+    {% else %}
+    <div class="scroll-panel">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>서브도메인</th>
+            <th>업체명</th>
+            <th>연락처</th>
+            <th>이메일</th>
+            <th>접수일</th>
+            <th>본사등록</th>
+            <th>승인</th>
+            <th>관리</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in applications %}
+          <tr>
+            <td>{{ a.id }}</td>
+            <td><b>{{ a.subdomain }}</b></td>
+            <td>{{ a.company_name }}</td>
+            <td class="muted">{{ a.phone }}</td>
+            <td class="muted">{{ a.email }}</td>
+            <td class="muted">{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>
+              {% if a.processed_at %}
+              <span style="color:#34d399;font-weight:800;">등록완료</span>
+              {% else %}
+              <span class="muted">대기</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if a.dealer_approved_at %}
+              <span style="color:#60a5fa;">승인됨</span>
+              {% else %}
+              <span class="muted">-</span>
+              {% endif %}
+            </td>
+            <td style="white-space:nowrap;">
+              {% if not a.dealer_approved_at %}
+              <form method="post" style="display:inline;margin:0;">
+                <input type="hidden" name="application_id" value="{{ a.id }}"/>
+                <input type="hidden" name="action" value="approve"/>
+                <button type="submit" style="font-size:11px;padding:4px 10px;">승인</button>
+              </form>
+              {% endif %}
+              <form method="post" style="display:inline;margin:0;" onsubmit="return confirm('이 목록에서 숨길까요?');">
+                <input type="hidden" name="application_id" value="{{ a.id }}"/>
+                <input type="hidden" name="action" value="dismiss"/>
+                <button type="submit" class="btn-secondary" style="font-size:11px;padding:4px 10px;">목록에서 제거</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+{% endblock %}

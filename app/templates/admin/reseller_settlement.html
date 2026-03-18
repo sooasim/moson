@@ -1,0 +1,85 @@
+{% extends "admin/base.html" %}
+{% block content %}
+  <div class="card" style="margin-top:16px;" id="settlement">
+    <h2 style="margin:0 0 8px 0;">대리점 정산</h2>
+    <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
+      본사 어드민 「대리점 관리」 하단과 <b>동일 DB</b>를 사용합니다. 체크 후 정산완료 처리 시 본사 화면과 동일하게 반영됩니다.
+    </p>
+    <form method="post" action="{{ url_for('routes.admin_settlement_mark_done') }}" id="form-settlement-sub">
+      <input type="hidden" name="next" value="{{ url_for('routes.admin_reseller_settlement') }}#settlement"/>
+      <div class="scroll-panel" style="max-height:480px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px;"></th>
+              <th>고객</th>
+              <th>상품요약</th>
+              <th>최종경품</th>
+              <th>리셀러비용</th>
+              <th>END금액</th>
+              <th>END현금</th>
+              <th>정산</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in settlement_rows %}
+            {% set c = row.consult %}
+            {% set am = row.amounts %}
+            <tr class="settle-row"
+                data-fg="{{ am.final_gift if am else 0 }}"
+                data-rf="{{ am.reseller_fee if am else 0 }}"
+                data-ea="{{ am.end_amount if am else 0 }}"
+                data-ec="{{ am.end_cash if am else 0 }}"
+                data-has-am="{{ 1 if am else 0 }}">
+              <td>
+                {% if (c.settlement_status or '미정산') == '미정산' %}
+                <input type="checkbox" name="consult_ids" value="{{ c.id }}" class="settle-cb-sub"/>
+                {% else %}
+                <span class="muted">—</span>
+                {% endif %}
+              </td>
+              <td class="muted" style="font-size:12px;">{{ c.customer_name or '-' }}<br/>{{ c.customer_phone or '' }}</td>
+              <td class="muted" style="font-size:11px;max-width:200px;">{{ (c.telcos or '')[:40] }}<br/>{{ (c.products or '')[:50] }}</td>
+              <td style="font-size:12px;">{% if am %}{{ '{:,}'.format(am.final_gift) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;">{% if am %}{{ '{:,}'.format(am.reseller_fee) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;color:#60a5fa;">{% if am %}{{ '{:,}'.format(am.end_amount) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;color:#f87171;">{% if am %}{{ '{:,}'.format(am.end_cash) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;font-weight:800;">{{ c.settlement_status or '미정산' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:16px;padding:14px 16px;border-radius:14px;background:rgba(15,23,42,.85);border:1px solid rgba(16,185,129,.25);">
+        <div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#a7f3d0;">체크한 행 합산</div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:13px;">
+          <div>최종경품 합: <b id="sum-fg-s">0</b></div>
+          <div>리셀러비용 합: <b id="sum-rf-s">0</b></div>
+          <div>END금액 합: <b id="sum-ea-s" style="color:#60a5fa;">0</b></div>
+          <div>END현금 합: <b id="sum-ec-s" style="color:#f87171;">0</b></div>
+        </div>
+        <button type="submit" class="pill" style="margin-top:12px;font-weight:900;border:2px solid #10b981;cursor:pointer;" onclick="return confirm('선택한 신청을 정산완료로 처리할까요?');">선택 항목 정산완료</button>
+      </div>
+    </form>
+    <script>
+    (function(){
+      function sum() {
+        var fg=0, rf=0, ea=0, ec=0;
+        document.querySelectorAll('#form-settlement-sub .settle-cb-sub:checked').forEach(function(cb) {
+          var tr = cb.closest('tr');
+          if (!tr || tr.getAttribute('data-has-am') !== '1') return;
+          fg += parseInt(tr.getAttribute('data-fg'),10) || 0;
+          rf += parseInt(tr.getAttribute('data-rf'),10) || 0;
+          ea += parseInt(tr.getAttribute('data-ea'),10) || 0;
+          ec += parseInt(tr.getAttribute('data-ec'),10) || 0;
+        });
+        document.getElementById('sum-fg-s').textContent = fg.toLocaleString();
+        document.getElementById('sum-rf-s').textContent = rf.toLocaleString();
+        document.getElementById('sum-ea-s').textContent = ea.toLocaleString();
+        document.getElementById('sum-ec-s').textContent = ec.toLocaleString();
+      }
+      document.querySelectorAll('#form-settlement-sub .settle-cb-sub').forEach(function(c){ c.addEventListener('change', sum); });
+    })();
+    </script>
+  </div>
+{% endblock %}

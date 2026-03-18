@@ -63,6 +63,8 @@ def create_app():
     with app.app_context():
         try:
             db.create_all()
+            from .db_migrate import run_schema_patches
+            run_schema_patches(app, db)
             # 정책표 자동 불러오기: 로컬(SQLite)에서만 실행. 배포(Postgres)에서는 절대 자동 불러오기 하지 않음.
             # → 커밋/푸시 후 재배포해도 DB에 저장된 수정 내용이 유지됨. 초기 데이터는 어드민 정책표 페이지에서 엑셀 업로드로만 반영.
             if not database_url:

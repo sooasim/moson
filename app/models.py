@@ -17,6 +17,8 @@ class Reseller(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    # 어느 대리점이 모집해 등록했는지 (NULL이면 본사 직접 모집/등록)
+    recruited_by_reseller_id = db.Column(db.Integer, db.ForeignKey("resellers.id"), nullable=True, index=True)
 
 
 class ConsultRequest(db.Model):
@@ -36,6 +38,12 @@ class ConsultRequest(db.Model):
 
     bundle = db.Column(db.String(50), nullable=True)   # internet_only / internet_tv
     speed = db.Column(db.String(50), nullable=True)    # 100 / 500 / 1000 etc
+
+    policy_row_id = db.Column(db.Integer, db.ForeignKey("policy_rows.id"), nullable=True, index=True)
+    policy_row = db.relationship("PolicyRow", backref=db.backref("consults", lazy="dynamic"))
+
+    settlement_status = db.Column(db.String(20), nullable=False, default="미정산")  # 미정산 / 정산완료
+    settled_at = db.Column(db.DateTime, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
@@ -172,3 +180,7 @@ class ResellerApplication(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     processed_at = db.Column(db.DateTime, nullable=True)
+    # 서브사이트에서 접수 시 모집 대리점 (NULL이면 본사 moson.life 접수)
+    recruiting_reseller_id = db.Column(db.Integer, db.ForeignKey("resellers.id"), nullable=True, index=True)
+    dealer_approved_at = db.Column(db.DateTime, nullable=True)
+    dealer_dismissed_at = db.Column(db.DateTime, nullable=True)

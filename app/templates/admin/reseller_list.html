@@ -17,6 +17,7 @@
           <tr>
             <th style="width:40px;"><input type="checkbox" onclick="document.querySelectorAll('input[name=&quot;reseller_ids&quot;]').forEach(c=>c.checked=this.checked)"></th>
             <th>Subdomain</th>
+            <th>모집 경로</th>
             <th>업체명</th>
             <th>대표자</th>
             <th>연락처</th>
@@ -33,6 +34,14 @@
             <tr>
               <td><input type="checkbox" name="reseller_ids" value="{{ d.id }}"></td>
               <td><b>{{ d.subdomain }}</b></td>
+              <td class="muted" style="font-size:12px;max-width:140px;">
+                {% if d.recruited_by_reseller_id %}
+                  {% set parent = reseller_by_id.get(d.recruited_by_reseller_id) %}
+                  대리점 모집{% if parent %}<br/><b style="color:#a7f3d0;">{{ parent.company_name }}</b>{% endif %}
+                {% else %}
+                  <span style="color:#94a3b8;">본사 직접</span>
+                {% endif %}
+              </td>
               <td>{{ d.company_name }}</td>
               <td class="muted">{{ d.representative or '-' }}</td>
               <td class="muted">{{ d.phone }}</td>
@@ -119,5 +128,130 @@
     </div>
   </div>
   {% endif %}
+
+  <div class="card" style="margin-top:20px;">
+    <h2 style="margin:0 0 8px 0;">부업 파트너 신청 (모집 채널)</h2>
+    <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
+      <b>본사</b>: moson.life 에서 접수 · <b>대리점 모집</b>: 해당 대리점 서브페이지에서 접수 (동일 DB)
+    </p>
+    <div class="scroll-panel" style="max-height:320px;">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>모집</th>
+            <th>서브도메인</th>
+            <th>업체명</th>
+            <th>연락처</th>
+            <th>접수일</th>
+            <th>등록</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in partner_apps_recent %}
+          <tr>
+            <td>{{ a.id }}</td>
+            <td>
+              {% if a.recruiting_reseller_id %}
+                {% set rp = reseller_by_id.get(a.recruiting_reseller_id) %}
+                대리점{% if rp %}<br/><span style="color:#6ee7b7;font-weight:700;">{{ rp.company_name }}</span>{% endif %}
+              {% else %}
+                <span style="color:#94a3b8;">본사</span>
+              {% endif %}
+            </td>
+            <td><b>{{ a.subdomain }}</b></td>
+            <td>{{ a.company_name }}</td>
+            <td class="muted">{{ a.phone }}</td>
+            <td class="muted">{{ a.created_at.strftime('%m-%d %H:%M') }}</td>
+            <td>{% if a.processed_at %}<span style="color:#34d399;">완료</span>{% else %}<span class="muted">대기</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:20px;" id="settlement">
+    <h2 style="margin:0 0 8px 0;">대리점 정산 (서브 접수 고객 신청)</h2>
+    <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
+      대리점 서브에서 접수된 견적 신청만 표시됩니다. 정책표 행이 연결된 건만 금액 합산이 가능합니다. 체크 후 <b>선택 정산완료</b>를 누르면 미정산 → 정산완료로 바뀝니다.
+    </p>
+    <form method="post" action="{{ url_for('routes.admin_settlement_mark_done') }}" id="form-settlement-main">
+      <input type="hidden" name="next" value="{{ url_for('routes.admin_reseller_list') }}#settlement"/>
+      <div class="scroll-panel" style="max-height:480px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px;"></th>
+              <th>대리점</th>
+              <th>고객</th>
+              <th>상품요약</th>
+              <th>최종경품</th>
+              <th>리셀러비용</th>
+              <th>END금액</th>
+              <th>END현금</th>
+              <th>정산</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in settlement_rows %}
+            {% set c = row.consult %}
+            {% set am = row.amounts %}
+            <tr class="settle-row"
+                data-fg="{{ am.final_gift if am else 0 }}"
+                data-rf="{{ am.reseller_fee if am else 0 }}"
+                data-ea="{{ am.end_amount if am else 0 }}"
+                data-ec="{{ am.end_cash if am else 0 }}"
+                data-has-am="{{ 1 if am else 0 }}">
+              <td>
+                {% if (c.settlement_status or '미정산') == '미정산' %}
+                <input type="checkbox" name="consult_ids" value="{{ c.id }}" class="settle-cb" onchange="window._sumSettlement && window._sumSettlement()"/>
+                {% else %}
+                <span class="muted">—</span>
+                {% endif %}
+              </td>
+              <td style="font-size:12px;"><b>{{ row.reseller.company_name if row.reseller else '-' }}</b><br/><span class="muted">{{ row.reseller.subdomain if row.reseller else '' }}</span></td>
+              <td class="muted" style="font-size:12px;">{{ c.customer_name or '-' }}<br/>{{ c.customer_phone or '' }}</td>
+              <td class="muted" style="font-size:11px;max-width:200px;">{{ (c.telcos or '')[:40] }}<br/>{{ (c.products or '')[:50] }}</td>
+              <td style="font-size:12px;">{% if am %}{{ '{:,}'.format(am.final_gift) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;">{% if am %}{{ '{:,}'.format(am.reseller_fee) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;color:#60a5fa;">{% if am %}{{ '{:,}'.format(am.end_amount) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;color:#f87171;">{% if am %}{{ '{:,}'.format(am.end_cash) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;font-weight:800;">{{ c.settlement_status or '미정산' }}{% if c.settled_at %}<br/><span class="muted" style="font-weight:400;font-size:10px;">{{ c.settled_at.strftime('%m-%d') }}</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:16px;padding:14px 16px;border-radius:14px;background:rgba(15,23,42,.85);border:1px solid rgba(16,185,129,.25);">
+        <div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#a7f3d0;">체크한 행 합산 (정책 연결 건만)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:13px;">
+          <div>최종경품 합: <b id="sum-fg" style="color:#e2e8f0;">0</b></div>
+          <div>리셀러비용 합: <b id="sum-rf" style="color:#e2e8f0;">0</b></div>
+          <div>END금액 합: <b id="sum-ea" style="color:#60a5fa;">0</b></div>
+          <div>END현금 합: <b id="sum-ec" style="color:#f87171;">0</b></div>
+        </div>
+        <button type="submit" class="pill" style="margin-top:12px;font-weight:900;border:2px solid #10b981;cursor:pointer;" onclick="return confirm('선택한 신청을 정산완료로 처리할까요?');">선택 항목 정산완료</button>
+      </div>
+    </form>
+    <script>
+    window._sumSettlement = function() {
+      var fg=0, rf=0, ea=0, ec=0;
+      document.querySelectorAll('#form-settlement-main .settle-cb:checked').forEach(function(cb) {
+        var tr = cb.closest('tr');
+        if (!tr || tr.getAttribute('data-has-am') !== '1') return;
+        fg += parseInt(tr.getAttribute('data-fg'),10) || 0;
+        rf += parseInt(tr.getAttribute('data-rf'),10) || 0;
+        ea += parseInt(tr.getAttribute('data-ea'),10) || 0;
+        ec += parseInt(tr.getAttribute('data-ec'),10) || 0;
+      });
+      document.getElementById('sum-fg').textContent = fg.toLocaleString();
+      document.getElementById('sum-rf').textContent = rf.toLocaleString();
+      document.getElementById('sum-ea').textContent = ea.toLocaleString();
+      document.getElementById('sum-ec').textContent = ec.toLocaleString();
+    };
+    document.querySelectorAll('#form-settlement-main .settle-cb').forEach(function(c){ c.addEventListener('change', window._sumSettlement); });
+    </script>
+  </div>
 {% endblock %}
 

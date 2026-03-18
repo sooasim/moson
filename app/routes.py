@@ -6,6 +6,7 @@ import secrets
 import json
 from datetime import datetime, timedelta
 from flask import Blueprint, current_app, make_response, render_template, request, redirect, url_for, session, flash, jsonify, send_file
+from sqlalchemy.orm import joinedload
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from .extensions import db
@@ -15,6 +16,31 @@ from .emailer import send_email
 from .cloudflare_dns import ensure_dns_record
 
 bp = Blueprint("routes", __name__)
+
+
+def _amounts_from_policy_row(row: PolicyRow | None) -> dict | None:
+    """정책표 행 기준 최종경품·리셀러비용(현금의 25%)·END금액·END현금."""
+    if not row:
+        return None
+    fg = int(row.final_gift or 0)
+    cash = int(row.cash or 0)
+    rf = int(round(cash * 0.25))
+    return {
+        "final_gift": fg,
+        "reseller_fee": rf,
+        "end_amount": fg + rf,
+        "end_cash": cash - rf,
+    }
+
+
+def _settlement_rows_for_consults(consults: list) -> list:
+    out = []
+    for c in consults:
+        pr = None
+        if getattr(c, "policy_row_id", None):
+            pr = PolicyRow.query.get(c.policy_row_id)
+        out.append({"consult": c, "amounts": _amounts_from_policy_row(pr), "reseller": c.reseller})
+    return out
 
 
 def _pending_partner_applications_open() -> list:
@@ -540,6 +566,7 @@ def partner_apply():
             }
             return render_template("partner_apply.html", title="부업 파트너 신청", form_data=form_data)
 
+        t = get_tenant()
         app_row = ResellerApplication(
             subdomain=subdomain,
             company_name=company_name,
@@ -548,6 +575,7 @@ def partner_apply():
             email=email,
             bank_name=bank_name,
             bank_account=bank_account,
+            recruiting_reseller_id=t.id if t else None,
         )
         db.session.add(app_row)
         db.session.commit()
@@ -561,8 +589,13 @@ def partner_apply():
             to_list.append(email)
 
         subject = f"[MOSON] 신규 부업 파트너 신청 - {company_name or subdomain}"
+        recruit_line = "모집 채널: 본사 (moson.life)"
+        if t:
+            recruit_line = f"모집 채널: 대리점 서브 ({t.subdomain}.{current_app.config.get('BASE_DOMAIN', 'moson.life')} / {t.company_name})"
         body_lines = [
             "부업 파트너(대리점) 신청이 접수되었습니다.",
+            "",
+            recruit_line,
             "",
             f"대리점 주소(서브도메인): {subdomain}",
             f"업체명: {company_name}",
@@ -653,6 +686,7 @@ def submit_consult():
         products=prods_str,
         bundle=bundle,
         speed=speed,
+        policy_row_id=quote_row_id if quote_row_id else None,
     )
     db.session.add(r)
     db.session.commit()
@@ -912,6 +946,7 @@ def admin_reseller_list():
         db.session.commit()
 
     resellers = Reseller.query.filter_by(is_active=True).order_by(Reseller.id.desc()).all()
+    reseller_by_id = {x.id: x for x in Reseller.query.all()}
     pending_deleted = (
         Reseller.query.filter(
             Reseller.is_active.is_(False),
@@ -921,11 +956,25 @@ def admin_reseller_list():
         .order_by(Reseller.deleted_at.desc())
         .all()
     )
+    partner_apps_recent = (
+        ResellerApplication.query.order_by(ResellerApplication.id.desc()).limit(80).all()
+    )
+    settlement_consults = (
+        ConsultRequest.query.options(joinedload(ConsultRequest.reseller))
+        .filter(ConsultRequest.reseller_id.isnot(None))
+        .order_by(ConsultRequest.id.desc())
+        .limit(400)
+        .all()
+    )
+    settlement_rows = _settlement_rows_for_consults(settlement_consults)
     return render_template(
         "admin/reseller_list.html",
         title="대리점 관리",
         resellers=resellers,
+        reseller_by_id=reseller_by_id,
         pending_deleted=pending_deleted,
+        partner_apps_recent=partner_apps_recent,
+        settlement_rows=settlement_rows,
     )
 
 
@@ -979,6 +1028,108 @@ def admin_reseller_restore(reseller_id: int):
     db.session.commit()
     flash("대리점이 복구되었습니다.")
     return redirect(url_for("routes.admin_reseller_list"))
+
+
+@bp.route("/admin/reseller-recruits", methods=["GET", "POST"])
+def admin_reseller_recruits():
+    """서브사이트: 본사 DB와 동일한 부업 신청 — 승인·목록 숨기기."""
+    tenant = get_tenant()
+    if not tenant:
+        flash("대리점 로그인 후 이용해 주세요.", "error")
+        return redirect(url_for("routes.admin_login"))
+    gate = _require_reseller(tenant)
+    if gate:
+        return gate
+    if request.method == "POST":
+        aid = request.form.get("application_id", type=int)
+        action = (request.form.get("action") or "").strip()
+        app_row = ResellerApplication.query.get(aid) if aid else None
+        if not app_row or app_row.recruiting_reseller_id != tenant.id:
+            flash("처리할 수 없는 신청입니다.", "error")
+            return redirect(url_for("routes.admin_reseller_recruits"))
+        if action == "approve":
+            app_row.dealer_approved_at = datetime.utcnow()
+            flash("승인 처리되었습니다. 본사 어드민에서도 동일하게 확인됩니다.")
+        elif action == "dismiss":
+            app_row.dealer_dismissed_at = datetime.utcnow()
+            flash("이 대리점 화면에서는 숨겼습니다. 본사에서는 계속 조회됩니다.")
+        else:
+            flash("잘못된 요청입니다.", "error")
+        db.session.commit()
+        return redirect(url_for("routes.admin_reseller_recruits"))
+    applications = (
+        ResellerApplication.query.filter_by(recruiting_reseller_id=tenant.id)
+        .filter(ResellerApplication.dealer_dismissed_at.is_(None))
+        .order_by(ResellerApplication.id.desc())
+        .all()
+    )
+    return render_template(
+        "admin/reseller_recruits.html",
+        title="리셀러 관리",
+        applications=applications,
+    )
+
+
+@bp.get("/admin/settlement")
+def admin_reseller_settlement():
+    tenant = get_tenant()
+    if not tenant:
+        return redirect(url_for("routes.admin_index"))
+    gate = _require_reseller(tenant)
+    if gate:
+        return gate
+    consults = (
+        ConsultRequest.query.options(joinedload(ConsultRequest.reseller))
+        .filter_by(reseller_id=tenant.id)
+        .order_by(ConsultRequest.id.desc())
+        .limit(400)
+        .all()
+    )
+    rows = _settlement_rows_for_consults(consults)
+    return render_template(
+        "admin/reseller_settlement.html",
+        title="대리점 정산",
+        settlement_rows=rows,
+    )
+
+
+@bp.post("/admin/settlement/mark-done")
+def admin_settlement_mark_done():
+    next_url = (request.form.get("next") or "").strip()
+    if not next_url.startswith("/") or next_url.startswith("//"):
+        next_url = url_for("routes.admin_reseller_list")
+    ids = [int(x) for x in request.form.getlist("consult_ids") if str(x).isdigit()]
+    tenant = get_tenant()
+    n_ok = 0
+    if tenant:
+        gate = _require_reseller(tenant)
+        if gate:
+            return gate
+        for cid in ids:
+            c = ConsultRequest.query.get(cid)
+            if not c or c.reseller_id != tenant.id:
+                continue
+            if (c.settlement_status or "미정산") == "미정산":
+                c.settlement_status = "정산완료"
+                c.settled_at = datetime.utcnow()
+                n_ok += 1
+        db.session.commit()
+        flash(f"정산완료 {n_ok}건 처리했습니다.")
+    else:
+        gate = _require_main()
+        if gate:
+            return gate
+        for cid in ids:
+            c = ConsultRequest.query.get(cid)
+            if not c or not c.reseller_id:
+                continue
+            if (c.settlement_status or "미정산") == "미정산":
+                c.settlement_status = "정산완료"
+                c.settled_at = datetime.utcnow()
+                n_ok += 1
+        db.session.commit()
+        flash(f"정산완료 {n_ok}건 처리했습니다.")
+    return redirect(next_url)
 
 
 @bp.get("/admin/profile")
@@ -1608,6 +1759,10 @@ def admin_reseller_new():
         base = current_app.config.get("BASE_DOMAIN") or "moson.life"
         website_url = f"https://{subdomain}.{base}"
 
+        app_id_raw = request.form.get("application_id")
+        app_row_pref = ResellerApplication.query.get(int(app_id_raw)) if app_id_raw and app_id_raw.isdigit() else None
+        recruited_by = app_row_pref.recruiting_reseller_id if app_row_pref and app_row_pref.recruiting_reseller_id else None
+
         r = Reseller(
             subdomain=subdomain,
             company_name=company_name,
@@ -1618,6 +1773,7 @@ def admin_reseller_new():
             bank_name=bank_name,
             bank_account=bank_account,
             admin_password_hash=generate_password_hash(initial_password),
+            recruited_by_reseller_id=recruited_by,
         )
         db.session.add(r)
         db.session.commit()
@@ -1628,9 +1784,8 @@ def admin_reseller_new():
             flash(msg)
 
         # 신청서에서 넘어온 경우 처리 완료 표시
-        app_id = request.form.get("application_id")
-        if app_id:
-            app_row = ResellerApplication.query.get(app_id)
+        if app_id_raw and app_id_raw.isdigit():
+            app_row = ResellerApplication.query.get(int(app_id_raw))
             if app_row:
                 app_row.processed_at = datetime.utcnow()
                 db.session.commit()

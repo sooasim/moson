@@ -80,3 +80,12 @@ def run_schema_patches(app, db) -> None:
                 )
         except Exception:
             pass
+
+    if not has_col("consult_requests", "settlement_hidden_at"):
+        try:
+            run(
+                "ALTER TABLE consult_requests ADD COLUMN settlement_hidden_at TIMESTAMP",
+                "ALTER TABLE consult_requests ADD COLUMN IF NOT EXISTS settlement_hidden_at TIMESTAMP",
+            )
+        except Exception:
+            app.logger.exception("settlement_hidden_at patch")

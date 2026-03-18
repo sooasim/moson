@@ -63,7 +63,7 @@
           <a href="{{ url_for('routes.admin_reseller_list') }}" class="{% if request.path.startswith('/admin/resellers') %}active{% endif %}">대리점 관리</a>
           <a href="{{ url_for('routes.admin_policy') }}" class="{% if request.path.startswith('/admin/policy') %}active{% endif %}">정책표</a>
           {% if session.get('admin_role') == 'master' %}
-          <a href="{{ url_for('routes.admin_user_list') }}" class="{% if request.path.startswith('/admin/users') %}active{% endif %}">회원관리</a>
+          <a href="{{ url_for('routes.admin_user_list') }}" class="{% if request.path.startswith('/admin/users') %}active{% endif %}">어드민 관리</a>
           {% endif %}
           <a href="{{ url_for('routes.admin_script_templates') }}" class="{% if request.path.startswith('/admin/scripts') %}active{% endif %}">상담 스크립트/FAQ</a>
           <a href="{{ url_for('routes.admin_notify_settings') }}" class="{% if request.path.startswith('/admin/notify') %}active{% endif %}">알림 연동</a>

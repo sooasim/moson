@@ -1,88 +1,203 @@
 {% extends "admin/base.html" %}
 {% block content %}
-  <div class="card" style="margin-top:16px;margin-bottom:16px;">
-    <h2 style="margin:0 0 8px 0;">대리점 관리</h2>
-    <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
-      서브도메인 기반으로 생성된 모든 대리점 목록입니다. 신규 대리점을 생성하거나, 각 대리점 어드민 페이지로 이동할 수 있습니다.<br/>
-      삭제 시 24시간 동안 삭제 대기 상태가 유지되며, 그 안에는 복구가 가능합니다.
-    </p>
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap;">
-      <div class="muted" style="font-size:12px;">총 {{ resellers|length }}개 대리점</div>
-      <a href="{{ url_for('routes.admin_reseller_new') }}" class="pill" style="text-decoration:none;font-size:12px;">+ 대리점 생성</a>
+
+  <div class="card" style="margin-top:16px;" id="settlement">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+      <h2 style="margin:0;">대리점 정산 (서브 접수 고객 신청)</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <a href="{{ url_for('routes.admin_settlement_export_xlsx') }}" class="pill" style="text-decoration:none;font-size:12px;">엑셀 다운로드</a>
+      </div>
     </div>
-    <form method="post" action="{{ url_for('routes.admin_reseller_delete') }}">
-    <div class="scroll-panel">
+    <p class="muted" style="margin:0 0 10px 0;font-size:12px;">
+      목록에서 <b>숨김</b>한 건은 DB에 남아 있으며, 아래 <b>날짜로 불러오기</b>로 다시 표시할 수 있습니다. 상담 원본 데이터는 약 90일 보관 후 매월 1일 초과분이 삭제됩니다.
+    </p>
+
+    <form method="get" action="{{ url_for('routes.admin_reseller_list') }}" style="margin-bottom:14px;padding:12px;border-radius:12px;background:rgba(15,23,42,.5);border:1px solid rgba(255,255,255,.08);display:flex;flex-wrap:wrap;gap:10px;align-items:end;">
+      <div>
+        <label class="muted" style="font-size:11px;">숨김일 시작</label>
+        <input type="date" name="hid_from" value="{{ hid_from }}" style="max-width:160px;">
+      </div>
+      <div>
+        <label class="muted" style="font-size:11px;">숨김일 끝</label>
+        <input type="date" name="hid_to" value="{{ hid_to }}" style="max-width:160px;">
+      </div>
+      <button type="submit" class="pill" style="font-size:12px;">불러오기 (숨김 건 조회)</button>
+      <a href="{{ url_for('routes.admin_reseller_list') }}#settlement" class="muted" style="font-size:12px;">초기화</a>
+    </form>
+
+    {% if settlement_restore_rows %}
+    <div style="margin-bottom:16px;padding:12px;border-radius:12px;border:1px solid rgba(251,191,36,.35);background:rgba(120,53,15,.2);">
+      <h3 style="margin:0 0 8px 0;font-size:14px;color:#fcd34d;">숨김 처리된 건 (복구)</h3>
+      <form method="post" action="{{ url_for('routes.admin_settlement_unhide') }}">
+        <div class="scroll-panel" style="max-height:240px;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px;"></th>
+                <th>숨김시각</th>
+                <th>대리점</th>
+                <th>고객</th>
+                <th>정산</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in settlement_restore_rows %}
+              {% set c = row.consult %}
+              <tr>
+                <td><input type="checkbox" name="restore_consult_ids" value="{{ c.id }}"></td>
+                <td class="muted" style="font-size:11px;">{{ c.settlement_hidden_at.strftime('%Y-%m-%d %H:%M') if c.settlement_hidden_at else '-' }}</td>
+                <td style="font-size:12px;">{{ row.reseller.company_name if row.reseller else '-' }}</td>
+                <td class="muted" style="font-size:12px;">{{ c.customer_name }} / {{ c.customer_phone }}</td>
+                <td>{{ c.settlement_status }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <button type="submit" class="pill" style="margin-top:10px;font-size:12px;border-color:#34d399;">선택 항목 정산 목록에 다시 표시</button>
+      </form>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('routes.admin_settlement_hide') }}" id="form-settlement-hide" style="margin-bottom:8px;">
+      <input type="hidden" name="next" value="{{ url_for('routes.admin_reseller_list') }}"/>
+    </form>
+    <form method="post" action="{{ url_for('routes.admin_settlement_mark_done') }}" id="form-settlement-main">
+      <input type="hidden" name="next" value="{{ url_for('routes.admin_reseller_list') }}#settlement"/>
+      <div class="scroll-panel" style="max-height:480px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:32px;" title="목록에서만 숨김">숨김</th>
+              <th style="width:36px;">정산</th>
+              <th>대리점</th>
+              <th>고객</th>
+              <th>상품요약</th>
+              <th>최종경품</th>
+              <th>리셀러비용</th>
+              <th>END금액</th>
+              <th>END현금</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in settlement_rows %}
+            {% set c = row.consult %}
+            {% set am = row.amounts %}
+            <tr class="settle-row"
+                data-fg="{{ am.final_gift if am else 0 }}"
+                data-rf="{{ am.reseller_fee if am else 0 }}"
+                data-ea="{{ am.end_amount if am else 0 }}"
+                data-ec="{{ am.end_cash if am else 0 }}"
+                data-has-am="{{ 1 if am else 0 }}">
+              <td><input type="checkbox" name="hide_consult_ids" value="{{ c.id }}" form="form-settlement-hide" title="목록에서 숨김"></td>
+              <td>
+                {% if (c.settlement_status or '미정산') == '미정산' %}
+                <input type="checkbox" name="consult_ids" value="{{ c.id }}" class="settle-cb" onchange="window._sumSettlement && window._sumSettlement()"/>
+                {% else %}<span class="muted">—</span>{% endif %}
+              </td>
+              <td style="font-size:12px;"><b>{{ row.reseller.company_name if row.reseller else '-' }}</b><br/><span class="muted">{{ row.reseller.subdomain if row.reseller else '' }}</span></td>
+              <td class="muted" style="font-size:12px;">{{ c.customer_name or '-' }}<br/>{{ c.customer_phone or '' }}</td>
+              <td class="muted" style="font-size:11px;max-width:200px;">{{ (c.telcos or '')[:40] }}<br/>{{ (c.products or '')[:50] }}</td>
+              <td style="font-size:12px;">{% if am %}{{ '{:,}'.format(am.final_gift) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;">{% if am %}{{ '{:,}'.format(am.reseller_fee) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;color:#60a5fa;">{% if am %}{{ '{:,}'.format(am.end_amount) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;color:#f87171;">{% if am %}{{ '{:,}'.format(am.end_cash) }}{% else %}<span class="muted">-</span>{% endif %}</td>
+              <td style="font-size:12px;font-weight:800;">{{ c.settlement_status or '미정산' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+        <button type="submit" form="form-settlement-hide" class="btn-secondary" style="font-size:12px;border-color:rgba(251,191,36,.5);color:#fcd34d;" onclick="return confirm('선택한 행을 정산 목록에서 숨길까요? (DB에는 남으며 불러오기로 복구 가능)');">선택 항목 목록에서 숨김</button>
+      </div>
+      <div style="margin-top:16px;padding:14px 16px;border-radius:14px;background:rgba(15,23,42,.85);border:1px solid rgba(16,185,129,.25);">
+        <div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#a7f3d0;">정산완료 — 체크한 행 합산 (정책 연결 건만)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:13px;">
+          <div>최종경품 합: <b id="sum-fg">0</b></div>
+          <div>리셀러비용 합: <b id="sum-rf">0</b></div>
+          <div>END금액 합: <b id="sum-ea" style="color:#60a5fa;">0</b></div>
+          <div>END현금 합: <b id="sum-ec" style="color:#f87171;">0</b></div>
+        </div>
+        <button type="submit" class="pill" style="margin-top:12px;font-weight:900;border:2px solid #10b981;" onclick="return confirm('선택한 신청을 정산완료로 처리할까요?');">선택 항목 정산완료</button>
+      </div>
+    </form>
+    <script>
+    window._sumSettlement = function() {
+      var fg=0, rf=0, ea=0, ec=0;
+      document.querySelectorAll('#form-settlement-main .settle-cb:checked').forEach(function(cb) {
+        var tr = cb.closest('tr');
+        if (!tr || tr.getAttribute('data-has-am') !== '1') return;
+        fg += parseInt(tr.getAttribute('data-fg'),10) || 0;
+        rf += parseInt(tr.getAttribute('data-rf'),10) || 0;
+        ea += parseInt(tr.getAttribute('data-ea'),10) || 0;
+        ec += parseInt(tr.getAttribute('data-ec'),10) || 0;
+      });
+      document.getElementById('sum-fg').textContent = fg.toLocaleString();
+      document.getElementById('sum-rf').textContent = rf.toLocaleString();
+      document.getElementById('sum-ea').textContent = ea.toLocaleString();
+      document.getElementById('sum-ec').textContent = ec.toLocaleString();
+    };
+    document.querySelectorAll('#form-settlement-main .settle-cb').forEach(function(c){ c.addEventListener('change', window._sumSettlement); });
+    </script>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <h2 style="margin:0 0 8px 0;">부업 파트너 신청 (모집 채널)</h2>
+    <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
+      <b>본사</b>: moson.life · <b>대리점</b>: 서브페이지 접수. 확인 완료된 건은 마스터만 삭제할 수 있습니다.
+    </p>
+    <div class="scroll-panel" style="max-height:320px;">
       <table>
         <thead>
           <tr>
-            <th style="width:40px;"><input type="checkbox" onclick="document.querySelectorAll('input[name=&quot;reseller_ids&quot;]').forEach(c=>c.checked=this.checked)"></th>
-            <th>Subdomain</th>
-            <th>모집 경로</th>
+            <th>ID</th>
+            <th>모집</th>
+            <th>서브도메인</th>
             <th>업체명</th>
-            <th>대표자</th>
             <th>연락처</th>
-            <th>이메일</th>
-            <th>사이트</th>
-            <th>은행 / 계좌</th>
-            <th>대리점 어드민</th>
-            <th>비밀번호</th>
-            <th>생성일</th>
+            <th>접수일</th>
+            <th>등록</th>
+            {% if session.get('admin_role') == 'master' %}<th>삭제</th>{% endif %}
           </tr>
         </thead>
         <tbody>
-          {% for d in resellers %}
-            <tr>
-              <td><input type="checkbox" name="reseller_ids" value="{{ d.id }}"></td>
-              <td><b>{{ d.subdomain }}</b></td>
-              <td class="muted" style="font-size:12px;max-width:140px;">
-                {% if d.recruited_by_reseller_id %}
-                  {% set parent = reseller_by_id.get(d.recruited_by_reseller_id) %}
-                  대리점 모집{% if parent %}<br/><b style="color:#a7f3d0;">{{ parent.company_name }}</b>{% endif %}
-                {% else %}
-                  <span style="color:#94a3b8;">본사 직접</span>
-                {% endif %}
-              </td>
-              <td>{{ d.company_name }}</td>
-              <td class="muted">{{ d.representative or '-' }}</td>
-              <td class="muted">{{ d.phone }}</td>
-              <td class="muted">{{ d.email }}</td>
-              <td class="muted">
-                {% if d.website_url %}
-                  <a href="{{ d.website_url }}" target="_blank" rel="noreferrer" class="muted" style="text-decoration:underline;">바로가기</a>
-                {% else %}
-                  -
-                {% endif %}
-              </td>
-              <td class="muted">
-                {% if d.bank_name or d.bank_account %}
-                  {{ d.bank_name or '' }}{% if d.bank_name and d.bank_account %} / {% endif %}{{ d.bank_account or '' }}
-                {% else %}
-                  -
-                {% endif %}
-              </td>
-              <td>
-                <a class="muted" href="http://{{ d.subdomain }}.{{ base_domain }}/admin/login" target="_blank" rel="noreferrer">어드민 열기</a>
-              </td>
-              <td>
-                <a href="{{ url_for('routes.admin_reseller_password', reseller_id=d.id) }}" class="muted" style="font-size:12px;text-decoration:underline;">비번 변경</a>
-              </td>
-              <td class="muted">{{ d.created_at.strftime("%m-%d") }}</td>
-            </tr>
+          {% for a in partner_apps_recent %}
+          <tr>
+            <td>{{ a.id }}</td>
+            <td>
+              {% if a.recruiting_reseller_id %}
+                {% set rp = reseller_by_id.get(a.recruiting_reseller_id) %}
+                대리점{% if rp %}<br/><span style="color:#6ee7b7;font-weight:700;">{{ rp.company_name }}</span>{% endif %}
+              {% else %}
+                <span style="color:#94a3b8;">본사</span>
+              {% endif %}
+            </td>
+            <td><b>{{ a.subdomain }}</b></td>
+            <td>{{ a.company_name }}</td>
+            <td class="muted">{{ a.phone }}</td>
+            <td class="muted">{{ a.created_at.strftime('%m-%d %H:%M') }}</td>
+            <td>{% if a.processed_at %}<span style="color:#34d399;">완료</span>{% else %}<span class="muted">대기</span>{% endif %}</td>
+            {% if session.get('admin_role') == 'master' %}
+            <td>
+              <form method="post" action="{{ url_for('routes.admin_partner_application_delete', app_id=a.id) }}" style="margin:0;" onsubmit="return confirm('이 신청 내역을 삭제할까요?');">
+                <button type="submit" style="font-size:10px;padding:4px 8px;border-radius:8px;border:1px solid rgba(239,68,68,.5);background:rgba(127,29,29,.3);color:#fecaca;cursor:pointer;">삭제</button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    <div style="margin-top:10px;display:flex;justify-content:flex-end;gap:8px;">
-      <button type="submit" onclick="return confirm('선택한 대리점을 삭제(비활성) 처리하시겠습니까?');" style="font-size:12px;">선택 삭제</button>
-    </div>
-    </form>
   </div>
 
   {% if pending_deleted %}
   <div class="card" style="margin-top:16px;">
     <h2 style="margin:0 0 8px 0;">삭제 대기 중인 대리점 (24시간 이내)</h2>
     <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
-      실수로 삭제한 경우, 24시간 안에는 아래 목록에서 <b>복구</b> 버튼을 눌러 되돌릴 수 있습니다. 24시간이 지나면 자동으로 완전 삭제됩니다.
+      실수로 삭제한 경우, 24시간 안에는 아래 목록에서 <b>복구</b> 버튼을 눌러 되돌릴 수 있습니다.
     </p>
     <div class="scroll-panel">
       <table>
@@ -110,15 +225,11 @@
             <td class="muted">
               {% if d.bank_name or d.bank_account %}
                 {{ d.bank_name or '' }}{% if d.bank_name and d.bank_account %} / {% endif %}{{ d.bank_account or '' }}
-              {% else %}
-                -
-              {% endif %}
+              {% else %}-{% endif %}
             </td>
             <td>
               <form method="post" action="{{ url_for('routes.admin_reseller_restore', reseller_id=d.id) }}" style="margin:0;">
-                <button type="submit" style="font-size:11px;padding:4px 10px;border-radius:999px;border:1px solid rgba(16,185,129,.6);background:rgba(16,185,129,.18);font-weight:800;cursor:pointer;">
-                  복구
-                </button>
+                <button type="submit" style="font-size:11px;padding:4px 10px;border-radius:999px;border:1px solid rgba(16,185,129,.6);background:rgba(16,185,129,.18);font-weight:800;cursor:pointer;">복구</button>
               </form>
             </td>
           </tr>
@@ -129,129 +240,74 @@
   </div>
   {% endif %}
 
-  <div class="card" style="margin-top:20px;">
-    <h2 style="margin:0 0 8px 0;">부업 파트너 신청 (모집 채널)</h2>
+  <div class="card" style="margin-top:20px;margin-bottom:16px;">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+      <h2 style="margin:0;">대리점 관리</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <a href="{{ url_for('routes.admin_resellers_export_xlsx') }}" class="pill" style="text-decoration:none;font-size:12px;">엑셀 다운로드</a>
+        <a href="{{ url_for('routes.admin_reseller_new') }}" class="pill" style="text-decoration:none;font-size:12px;">+ 대리점 생성</a>
+      </div>
+    </div>
     <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
-      <b>본사</b>: moson.life 에서 접수 · <b>대리점 모집</b>: 해당 대리점 서브페이지에서 접수 (동일 DB)
+      서브도메인 기반 대리점 목록. 삭제 시 24시간 삭제 대기 후 완전 삭제됩니다.
     </p>
-    <div class="scroll-panel" style="max-height:320px;">
+    <form method="post" action="{{ url_for('routes.admin_reseller_delete') }}">
+    <div class="scroll-panel">
       <table>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>모집</th>
-            <th>서브도메인</th>
+            <th style="width:40px;"><input type="checkbox" onclick="document.querySelectorAll('input[name=&quot;reseller_ids&quot;]').forEach(c=>c.checked=this.checked)"></th>
+            <th>Subdomain</th>
+            <th>모집 경로</th>
             <th>업체명</th>
+            <th>대표자</th>
             <th>연락처</th>
-            <th>접수일</th>
-            <th>등록</th>
+            <th>이메일</th>
+            <th>사이트</th>
+            <th>은행 / 계좌</th>
+            <th>어드민</th>
+            <th>비번</th>
+            <th>생성일</th>
           </tr>
         </thead>
         <tbody>
-          {% for a in partner_apps_recent %}
-          <tr>
-            <td>{{ a.id }}</td>
-            <td>
-              {% if a.recruiting_reseller_id %}
-                {% set rp = reseller_by_id.get(a.recruiting_reseller_id) %}
-                대리점{% if rp %}<br/><span style="color:#6ee7b7;font-weight:700;">{{ rp.company_name }}</span>{% endif %}
-              {% else %}
-                <span style="color:#94a3b8;">본사</span>
-              {% endif %}
-            </td>
-            <td><b>{{ a.subdomain }}</b></td>
-            <td>{{ a.company_name }}</td>
-            <td class="muted">{{ a.phone }}</td>
-            <td class="muted">{{ a.created_at.strftime('%m-%d %H:%M') }}</td>
-            <td>{% if a.processed_at %}<span style="color:#34d399;">완료</span>{% else %}<span class="muted">대기</span>{% endif %}</td>
-          </tr>
+          {% for d in resellers %}
+            <tr>
+              <td><input type="checkbox" name="reseller_ids" value="{{ d.id }}"></td>
+              <td><b>{{ d.subdomain }}</b></td>
+              <td class="muted" style="font-size:12px;max-width:140px;">
+                {% if d.recruited_by_reseller_id %}
+                  {% set parent = reseller_by_id.get(d.recruited_by_reseller_id) %}
+                  대리점 모집{% if parent %}<br/><b style="color:#a7f3d0;">{{ parent.company_name }}</b>{% endif %}
+                {% else %}
+                  <span style="color:#94a3b8;">본사 직접</span>
+                {% endif %}
+              </td>
+              <td>{{ d.company_name }}</td>
+              <td class="muted">{{ d.representative or '-' }}</td>
+              <td class="muted">{{ d.phone }}</td>
+              <td class="muted">{{ d.email }}</td>
+              <td class="muted">
+                {% if d.website_url %}
+                  <a href="{{ d.website_url }}" target="_blank" rel="noreferrer" class="muted" style="text-decoration:underline;">바로가기</a>
+                {% else %}-{% endif %}
+              </td>
+              <td class="muted">
+                {% if d.bank_name or d.bank_account %}
+                  {{ d.bank_name or '' }}{% if d.bank_name and d.bank_account %} / {% endif %}{{ d.bank_account or '' }}
+                {% else %}-{% endif %}
+              </td>
+              <td><a class="muted" href="http://{{ d.subdomain }}.{{ base_domain }}/admin/login" target="_blank" rel="noreferrer">열기</a></td>
+              <td><a href="{{ url_for('routes.admin_reseller_password', reseller_id=d.id) }}" class="muted" style="font-size:11px;text-decoration:underline;">변경</a></td>
+              <td class="muted">{{ d.created_at.strftime("%m-%d") }}</td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </div>
-
-  <div class="card" style="margin-top:20px;" id="settlement">
-    <h2 style="margin:0 0 8px 0;">대리점 정산 (서브 접수 고객 신청)</h2>
-    <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
-      대리점 서브에서 접수된 견적 신청만 표시됩니다. 정책표 행이 연결된 건만 금액 합산이 가능합니다. 체크 후 <b>선택 정산완료</b>를 누르면 미정산 → 정산완료로 바뀝니다.
-    </p>
-    <form method="post" action="{{ url_for('routes.admin_settlement_mark_done') }}" id="form-settlement-main">
-      <input type="hidden" name="next" value="{{ url_for('routes.admin_reseller_list') }}#settlement"/>
-      <div class="scroll-panel" style="max-height:480px;">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:36px;"></th>
-              <th>대리점</th>
-              <th>고객</th>
-              <th>상품요약</th>
-              <th>최종경품</th>
-              <th>리셀러비용</th>
-              <th>END금액</th>
-              <th>END현금</th>
-              <th>정산</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in settlement_rows %}
-            {% set c = row.consult %}
-            {% set am = row.amounts %}
-            <tr class="settle-row"
-                data-fg="{{ am.final_gift if am else 0 }}"
-                data-rf="{{ am.reseller_fee if am else 0 }}"
-                data-ea="{{ am.end_amount if am else 0 }}"
-                data-ec="{{ am.end_cash if am else 0 }}"
-                data-has-am="{{ 1 if am else 0 }}">
-              <td>
-                {% if (c.settlement_status or '미정산') == '미정산' %}
-                <input type="checkbox" name="consult_ids" value="{{ c.id }}" class="settle-cb" onchange="window._sumSettlement && window._sumSettlement()"/>
-                {% else %}
-                <span class="muted">—</span>
-                {% endif %}
-              </td>
-              <td style="font-size:12px;"><b>{{ row.reseller.company_name if row.reseller else '-' }}</b><br/><span class="muted">{{ row.reseller.subdomain if row.reseller else '' }}</span></td>
-              <td class="muted" style="font-size:12px;">{{ c.customer_name or '-' }}<br/>{{ c.customer_phone or '' }}</td>
-              <td class="muted" style="font-size:11px;max-width:200px;">{{ (c.telcos or '')[:40] }}<br/>{{ (c.products or '')[:50] }}</td>
-              <td style="font-size:12px;">{% if am %}{{ '{:,}'.format(am.final_gift) }}{% else %}<span class="muted">-</span>{% endif %}</td>
-              <td style="font-size:12px;">{% if am %}{{ '{:,}'.format(am.reseller_fee) }}{% else %}<span class="muted">-</span>{% endif %}</td>
-              <td style="font-size:12px;color:#60a5fa;">{% if am %}{{ '{:,}'.format(am.end_amount) }}{% else %}<span class="muted">-</span>{% endif %}</td>
-              <td style="font-size:12px;color:#f87171;">{% if am %}{{ '{:,}'.format(am.end_cash) }}{% else %}<span class="muted">-</span>{% endif %}</td>
-              <td style="font-size:12px;font-weight:800;">{{ c.settlement_status or '미정산' }}{% if c.settled_at %}<br/><span class="muted" style="font-weight:400;font-size:10px;">{{ c.settled_at.strftime('%m-%d') }}</span>{% endif %}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top:16px;padding:14px 16px;border-radius:14px;background:rgba(15,23,42,.85);border:1px solid rgba(16,185,129,.25);">
-        <div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#a7f3d0;">체크한 행 합산 (정책 연결 건만)</div>
-        <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:13px;">
-          <div>최종경품 합: <b id="sum-fg" style="color:#e2e8f0;">0</b></div>
-          <div>리셀러비용 합: <b id="sum-rf" style="color:#e2e8f0;">0</b></div>
-          <div>END금액 합: <b id="sum-ea" style="color:#60a5fa;">0</b></div>
-          <div>END현금 합: <b id="sum-ec" style="color:#f87171;">0</b></div>
-        </div>
-        <button type="submit" class="pill" style="margin-top:12px;font-weight:900;border:2px solid #10b981;cursor:pointer;" onclick="return confirm('선택한 신청을 정산완료로 처리할까요?');">선택 항목 정산완료</button>
-      </div>
+    <div style="margin-top:10px;display:flex;justify-content:flex-end;">
+      <button type="submit" onclick="return confirm('선택한 대리점을 삭제 대기 처리할까요?');" style="font-size:12px;">선택 삭제</button>
+    </div>
     </form>
-    <script>
-    window._sumSettlement = function() {
-      var fg=0, rf=0, ea=0, ec=0;
-      document.querySelectorAll('#form-settlement-main .settle-cb:checked').forEach(function(cb) {
-        var tr = cb.closest('tr');
-        if (!tr || tr.getAttribute('data-has-am') !== '1') return;
-        fg += parseInt(tr.getAttribute('data-fg'),10) || 0;
-        rf += parseInt(tr.getAttribute('data-rf'),10) || 0;
-        ea += parseInt(tr.getAttribute('data-ea'),10) || 0;
-        ec += parseInt(tr.getAttribute('data-ec'),10) || 0;
-      });
-      document.getElementById('sum-fg').textContent = fg.toLocaleString();
-      document.getElementById('sum-rf').textContent = rf.toLocaleString();
-      document.getElementById('sum-ea').textContent = ea.toLocaleString();
-      document.getElementById('sum-ec').textContent = ec.toLocaleString();
-    };
-    document.querySelectorAll('#form-settlement-main .settle-cb').forEach(function(c){ c.addEventListener('change', window._sumSettlement); });
-    </script>
   </div>
 {% endblock %}
-

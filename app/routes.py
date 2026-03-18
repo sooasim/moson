@@ -43,6 +43,92 @@ def _settlement_rows_for_consults(consults: list) -> list:
     return out
 
 
+CONSULT_RETENTION_DAYS = 90  # 약 3개월 보관 후 삭제
+
+
+def _purge_consults_beyond_retention() -> int:
+    """생성일 90일 초과 상담신청 삭제(상태행 포함). 매월 1일 1회만 실행."""
+    if datetime.utcnow().day != 1:
+        return 0
+    try:
+        path = os.path.join(current_app.instance_path, "last_consult_retention_purge.txt")
+        ym = datetime.utcnow().strftime("%Y-%m")
+        if os.path.isfile(path):
+            with open(path, "r", encoding="utf-8") as f:
+                if f.read().strip() == ym:
+                    return 0
+        os.makedirs(current_app.instance_path, exist_ok=True)
+    except OSError:
+        path = None
+        ym = datetime.utcnow().strftime("%Y-%m")
+
+    cutoff = datetime.utcnow() - timedelta(days=CONSULT_RETENTION_DAYS)
+    ids = [r[0] for r in db.session.query(ConsultRequest.id).filter(ConsultRequest.created_at < cutoff).all()]
+    if not ids:
+        if path:
+            try:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(ym)
+            except OSError:
+                pass
+        return 0
+    ConsultStatus.query.filter(ConsultStatus.consult_id.in_(ids)).delete(synchronize_session=False)
+    ConsultRequest.query.filter(ConsultRequest.id.in_(ids)).delete(synchronize_session=False)
+    db.session.commit()
+    if path:
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(ym)
+        except OSError:
+            pass
+    return len(ids)
+
+
+def _consult_to_excel_rows(consults: list) -> list:
+    rows = []
+    for r in consults:
+        dealer = "본사"
+        if r.reseller:
+            dealer = f"{r.reseller.company_name} ({r.reseller.subdomain})"
+        st = (r.status_obj.status if getattr(r, "status_obj", None) and r.status_obj else "신규")
+        rows.append(
+            [
+                r.id,
+                r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "",
+                dealer,
+                r.customer_name or "",
+                r.customer_phone or "",
+                r.telcos or "",
+                r.products or "",
+                f"{r.bundle or ''} / {r.speed or ''}",
+                r.source_host or "",
+                st,
+                (r.status_obj.memo if r.status_obj and r.status_obj.memo else "") or "",
+            ]
+        )
+    return rows
+
+
+def _xlsx_response(filename: str, headers: list, data_rows: list):
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(headers)
+    for row in data_rows:
+        ws.append(row)
+    bio = io.BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
 def _pending_partner_applications_open() -> list:
     """부업 신청 중 아직 대리점으로 등록되지 않은 건만 (processed_at 미처리 + 동일 서브도메인 리셀러 없음)."""
     apps = (
@@ -805,9 +891,33 @@ def admin_index():
         gate = _require_main()
         if gate:
             return gate
+        try:
+            purged = _purge_consults_beyond_retention()
+            if purged:
+                current_app.logger.info("Consult retention purge removed %s rows", purged)
+        except Exception:
+            current_app.logger.exception("consult retention purge")
+
+        since_consult = datetime.utcnow() - timedelta(days=CONSULT_RETENTION_DAYS)
+        cq = (
+            ConsultRequest.query.options(
+                joinedload(ConsultRequest.reseller),
+                joinedload(ConsultRequest.status_obj),
+            )
+            .filter(ConsultRequest.created_at >= since_consult)
+            .order_by(ConsultRequest.id.desc())
+        )
+        consult_total = cq.count()
+        consult_page = max(1, request.args.get("page", 1, type=int) or 1)
+        consult_per_page = 50
+        consult_pages = max(1, (consult_total + consult_per_page - 1) // consult_per_page)
+        if consult_page > consult_pages:
+            consult_page = consult_pages
+        consult_page_min = max(1, consult_page - 5)
+        consult_page_max = min(consult_pages, consult_page + 5)
         consults = (
-            ConsultRequest.query.order_by(ConsultRequest.id.desc())
-            .limit(300)
+            cq.offset((consult_page - 1) * consult_per_page)
+            .limit(consult_per_page)
             .all()
         )
         resellers = Reseller.query.order_by(Reseller.id.desc()).all()
@@ -873,6 +983,12 @@ def admin_index():
             "admin/main_dashboard.html",
             title="메인 어드민",
             consults=consults,
+            consult_total=consult_total,
+            consult_page=consult_page,
+            consult_pages=consult_pages,
+            consult_page_min=consult_page_min,
+            consult_page_max=consult_page_max,
+            consult_per_page=consult_per_page,
             resellers=resellers,
             pending_apps_count=pending_apps_count,
             total_visits=total_visits,
@@ -924,6 +1040,165 @@ def admin_update_consult_status(consult_id: int):
     return redirect(url_for("routes.admin_index") + f"#consult-{c.id}")
 
 
+@bp.get("/admin/consults/export.xlsx")
+def admin_consults_export_xlsx():
+    if get_tenant():
+        return redirect(url_for("routes.admin_index"))
+    gate = _require_main()
+    if gate:
+        return gate
+    since_consult = datetime.utcnow() - timedelta(days=CONSULT_RETENTION_DAYS)
+    scope = (request.args.get("scope") or "all").strip()
+    q = (
+        ConsultRequest.query.options(joinedload(ConsultRequest.reseller), joinedload(ConsultRequest.status_obj))
+        .filter(ConsultRequest.created_at >= since_consult)
+        .order_by(ConsultRequest.id.desc())
+    )
+    if scope == "page":
+        page = max(1, request.args.get("page", 1, type=int) or 1)
+        consults = q.offset((page - 1) * 50).limit(50).all()
+    else:
+        consults = q.all()
+    headers = ["ID", "접수일시", "대리점/본사", "고객명", "전화", "통신사", "상품", "구성/속도", "Host", "상태", "메모"]
+    return _xlsx_response(
+        "가입견적신청_%s.xlsx" % datetime.utcnow().strftime("%Y%m%d_%H%M"),
+        headers,
+        _consult_to_excel_rows(consults),
+    )
+
+
+@bp.get("/admin/resellers/export.xlsx")
+def admin_resellers_export_xlsx():
+    if get_tenant():
+        return redirect(url_for("routes.admin_index"))
+    gate = _require_main()
+    if gate:
+        return gate
+    resellers = Reseller.query.filter_by(is_active=True).order_by(Reseller.id.desc()).all()
+    rb = {x.id: x for x in Reseller.query.all()}
+    rows = []
+    for d in resellers:
+        src = "본사 직접"
+        if d.recruited_by_reseller_id:
+            p = rb.get(d.recruited_by_reseller_id)
+            src = p.company_name if p else str(d.recruited_by_reseller_id)
+        rows.append(
+            [
+                d.subdomain,
+                d.company_name,
+                d.representative or "",
+                d.phone,
+                d.email,
+                d.website_url or "",
+                f"{d.bank_name or ''} {d.bank_account or ''}",
+                src,
+                d.created_at.strftime("%Y-%m-%d") if d.created_at else "",
+            ]
+        )
+    headers = ["서브도메인", "업체명", "대표자", "연락처", "이메일", "사이트", "은행/계좌", "모집경로", "생성일"]
+    return _xlsx_response("대리점목록_%s.xlsx" % datetime.utcnow().strftime("%Y%m%d"), headers, rows)
+
+
+@bp.get("/admin/settlement/export.xlsx")
+def admin_settlement_export_xlsx():
+    if get_tenant():
+        return redirect(url_for("routes.admin_index"))
+    gate = _require_main()
+    if gate:
+        return gate
+    consults = (
+        ConsultRequest.query.options(joinedload(ConsultRequest.reseller))
+        .filter(ConsultRequest.reseller_id.isnot(None), ConsultRequest.settlement_hidden_at.is_(None))
+        .order_by(ConsultRequest.id.desc())
+        .limit(2000)
+        .all()
+    )
+    headers = [
+        "ID",
+        "접수일",
+        "대리점",
+        "고객명",
+        "전화",
+        "통신사",
+        "상품",
+        "최종경품",
+        "리셀러비용",
+        "END금액",
+        "END현금",
+        "정산상태",
+    ]
+    rows = []
+    for c in consults:
+        am = _amounts_from_policy_row(PolicyRow.query.get(c.policy_row_id) if c.policy_row_id else None)
+        rs = c.reseller.company_name if c.reseller else ""
+        rows.append(
+            [
+                c.id,
+                c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else "",
+                rs,
+                c.customer_name or "",
+                c.customer_phone or "",
+                c.telcos or "",
+                c.products or "",
+                am["final_gift"] if am else "",
+                am["reseller_fee"] if am else "",
+                am["end_amount"] if am else "",
+                am["end_cash"] if am else "",
+                c.settlement_status or "",
+            ]
+        )
+    return _xlsx_response("대리점정산_%s.xlsx" % datetime.utcnow().strftime("%Y%m%d"), headers, rows)
+
+
+@bp.post("/admin/settlement/hide")
+def admin_settlement_hide():
+    if get_tenant():
+        return redirect(url_for("routes.admin_index"))
+    gate = _require_main()
+    if gate:
+        return gate
+    ids = [int(x) for x in request.form.getlist("hide_consult_ids") if str(x).isdigit()]
+    now = datetime.utcnow()
+    for cid in ids:
+        c = ConsultRequest.query.get(cid)
+        if c and c.reseller_id:
+            c.settlement_hidden_at = now
+    db.session.commit()
+    flash(f"정산 목록에서 {len(ids)}건을 숨겼습니다. 날짜로 불러오기에서 복구할 수 있습니다.")
+    return redirect((request.form.get("next") or url_for("routes.admin_reseller_list")) + "#settlement")
+
+
+@bp.post("/admin/settlement/unhide")
+def admin_settlement_unhide():
+    if get_tenant():
+        return redirect(url_for("routes.admin_index"))
+    gate = _require_main()
+    if gate:
+        return gate
+    ids = [int(x) for x in request.form.getlist("restore_consult_ids") if str(x).isdigit()]
+    for cid in ids:
+        c = ConsultRequest.query.get(cid)
+        if c and c.reseller_id:
+            c.settlement_hidden_at = None
+    db.session.commit()
+    flash(f"{len(ids)}건을 정산 목록에 다시 표시합니다.")
+    return redirect(url_for("routes.admin_reseller_list") + "?hid_from=&hid_to=#settlement")
+
+
+@bp.post("/admin/partner-applications/<int:app_id>/delete")
+def admin_partner_application_delete(app_id: int):
+    if get_tenant():
+        return redirect(url_for("routes.admin_index"))
+    gate = _require_master()
+    if gate:
+        return gate
+    a = ResellerApplication.query.get_or_404(app_id)
+    db.session.delete(a)
+    db.session.commit()
+    flash("부업 파트너 신청을 삭제했습니다.")
+    return redirect(url_for("routes.admin_reseller_list"))
+
+
 @bp.get("/admin/resellers")
 def admin_reseller_list():
     """메인 어드민 전용 대리점 목록 페이지."""
@@ -961,12 +1236,36 @@ def admin_reseller_list():
     )
     settlement_consults = (
         ConsultRequest.query.options(joinedload(ConsultRequest.reseller))
-        .filter(ConsultRequest.reseller_id.isnot(None))
+        .filter(ConsultRequest.reseller_id.isnot(None), ConsultRequest.settlement_hidden_at.is_(None))
         .order_by(ConsultRequest.id.desc())
         .limit(400)
         .all()
     )
     settlement_rows = _settlement_rows_for_consults(settlement_consults)
+
+    settlement_restore_rows = []
+    hid_from = (request.args.get("hid_from") or "").strip()
+    hid_to = (request.args.get("hid_to") or "").strip()
+    if hid_from and hid_to:
+        try:
+            f0 = datetime.strptime(hid_from, "%Y-%m-%d")
+            t1 = datetime.strptime(hid_to, "%Y-%m-%d") + timedelta(days=1)
+            hid_consults = (
+                ConsultRequest.query.options(joinedload(ConsultRequest.reseller))
+                .filter(
+                    ConsultRequest.reseller_id.isnot(None),
+                    ConsultRequest.settlement_hidden_at.isnot(None),
+                    ConsultRequest.settlement_hidden_at >= f0,
+                    ConsultRequest.settlement_hidden_at < t1,
+                )
+                .order_by(ConsultRequest.settlement_hidden_at.desc())
+                .limit(500)
+                .all()
+            )
+            settlement_restore_rows = _settlement_rows_for_consults(hid_consults)
+        except ValueError:
+            pass
+
     return render_template(
         "admin/reseller_list.html",
         title="대리점 관리",
@@ -975,6 +1274,9 @@ def admin_reseller_list():
         pending_deleted=pending_deleted,
         partner_apps_recent=partner_apps_recent,
         settlement_rows=settlement_rows,
+        settlement_restore_rows=settlement_restore_rows,
+        hid_from=hid_from,
+        hid_to=hid_to,
     )
 
 
@@ -1081,6 +1383,7 @@ def admin_reseller_settlement():
     consults = (
         ConsultRequest.query.options(joinedload(ConsultRequest.reseller))
         .filter_by(reseller_id=tenant.id)
+        .filter(ConsultRequest.settlement_hidden_at.is_(None))
         .order_by(ConsultRequest.id.desc())
         .limit(400)
         .all()
@@ -1598,7 +1901,7 @@ def admin_user_list():
     users = AdminUser.query.order_by(AdminUser.id.desc()).all()
     return render_template(
         "admin/user_list.html",
-        title="회원관리",
+        title="어드민 관리",
         users=users,
     )
 
@@ -1668,6 +1971,56 @@ def admin_user_update(user_id: int):
     db.session.commit()
     flash("어드민 계정 정보가 저장되었습니다.")
     return redirect(url_for("routes.admin_user_list"))
+
+
+@bp.post("/admin/users/delete")
+def admin_user_batch_delete():
+    """체크한 어드민 계정 삭제 (admin 아이디·로그인 본인·최후 마스터 보호)."""
+    if get_tenant():
+        return redirect(url_for("routes.admin_index"))
+    gate = _require_master()
+    if gate:
+        return gate
+
+    ids = [int(x) for x in request.form.getlist("user_ids") if str(x).isdigit()]
+    if not ids:
+        flash("삭제할 계정을 선택해주세요.", "error")
+        return redirect(url_for("routes.admin_user_list"))
+
+    my_id = session.get("admin_id")
+    candidates = AdminUser.query.filter(AdminUser.id.in_(ids)).all()
+    masters_now = AdminUser.query.filter_by(role="master", is_active=True).all()
+    master_ids_now = {m.id for m in masters_now}
+
+    to_delete = []
+    skipped = []
+    for u in candidates:
+        if u.username == "admin":
+            skipped.append(f"{u.username}(기본 보호)")
+            continue
+        if u.id == my_id:
+            skipped.append(f"{u.username}(현재 로그인)")
+            continue
+        to_delete.append(u)
+
+    delete_ids = {u.id for u in to_delete}
+    if any(u.role == "master" and u.is_active for u in to_delete):
+        remaining_master_ids = master_ids_now - delete_ids
+        if len(remaining_master_ids) < 1:
+            flash("마스터 권한 계정은 최소 1명 이상 남겨야 합니다. 삭제 대상을 조정해 주세요.", "error")
+            return redirect(url_for("routes.admin_user_list"))
+
+    for u in to_delete:
+        db.session.delete(u)
+    db.session.commit()
+    if to_delete:
+        flash(f"{len(to_delete)}개 어드민 계정을 삭제했습니다.")
+    elif skipped:
+        flash("삭제된 계정 없음. 삭제 제외: " + " · ".join(skipped), "error")
+    if to_delete and skipped:
+        flash("일부 제외: " + " · ".join(skipped), "error")
+    return redirect(url_for("routes.admin_user_list"))
+
 
 @bp.route("/admin/login", methods=["GET","POST"])
 def admin_login():

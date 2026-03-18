@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}
 {% block content %}
   <div class="card" style="margin-top:16px;margin-bottom:16px;">
-    <h2 style="margin:0 0 8px 0;">어드민 계정 관리</h2>
+    <h2 style="margin:0 0 8px 0;">어드민 관리</h2>
     <p class="muted" style="margin:0 0 12px 0;font-size:12px;">
       마스터 권한에서만 접근 가능합니다. 상담사 권한은 <b>대리점 관리 / 정책표</b>를 열람만 할 수 있고, 마스터 권한은 모든 기능을 사용할 수 있습니다.
     </p>
@@ -29,23 +29,32 @@
 
   <div class="card" style="margin-top:16px;">
     <h2 style="margin:0 0 8px 0;">어드민 계정 목록</h2>
+    <p class="muted" style="margin:0 0 10px 0;font-size:12px;">체크 후 <b>선택 계정 삭제</b>로 일괄 삭제합니다. (<code>admin</code> 아이디·현재 로그인 계정·최후 마스터 1명은 삭제되지 않습니다.)</p>
     <div class="scroll-panel">
       <table>
         <thead>
           <tr>
+            <th style="width:40px;"><input type="checkbox" title="전체 선택" onclick="document.querySelectorAll('.cb-del-user').forEach(c=>{c.checked=this.checked;})"></th>
             <th style="width:60px;">ID</th>
             <th>아이디</th>
             <th style="width:120px;">권한</th>
-            <th style="width:160px;">비밀번호 변경</th>
+            <th style="width:220px;">비밀번호 변경</th>
           </tr>
         </thead>
         <tbody>
           {% for u in users %}
             <tr>
-              <td class="muted">{{ u.id }}</td>
-              <td>{{ u.username }}</td>
               <td>
-                <form method="post" action="{{ url_for('routes.admin_user_update', user_id=u.id) }}" style="display:flex;gap:6px;align-items:center;">
+                {% if u.username != 'admin' %}
+                <input type="checkbox" class="cb-del-user" name="user_ids" value="{{ u.id }}" form="form-delete-users">
+                {% else %}
+                <span class="muted" title="보호">—</span>
+                {% endif %}
+              </td>
+              <td class="muted">{{ u.id }}</td>
+              <td><b>{{ u.username }}</b>{% if u.username == 'admin' %} <span class="muted" style="font-size:11px;">(보호)</span>{% endif %}</td>
+              <td>
+                <form method="post" action="{{ url_for('routes.admin_user_update', user_id=u.id) }}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                   <select name="role" style="max-width:120px;">
                     <option value="consultant" {% if u.role == 'consultant' %}selected{% endif %}>상담사</option>
                     <option value="master" {% if u.role == 'master' %}selected{% endif %}>마스터</option>
@@ -53,7 +62,7 @@
               </td>
               <td>
                   <input type="password" name="new_password" placeholder="새 비밀번호(선택)" style="max-width:140px;">
-                  <button type="submit" class="btn btn-xs">저장</button>
+                  <button type="submit" style="font-size:11px;padding:6px 10px;">저장</button>
                 </form>
               </td>
             </tr>
@@ -61,6 +70,8 @@
         </tbody>
       </table>
     </div>
+    <form id="form-delete-users" method="post" action="{{ url_for('routes.admin_user_batch_delete') }}" style="margin-top:12px;display:flex;justify-content:flex-end;">
+      <button type="submit" class="btn-secondary" style="border-color:rgba(239,68,68,.5);color:#fecaca;" onclick="return confirm('선택한 어드민 계정을 삭제할까요?');">선택 계정 삭제</button>
+    </form>
   </div>
 {% endblock %}
-

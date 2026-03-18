@@ -44,6 +44,8 @@ class ConsultRequest(db.Model):
 
     settlement_status = db.Column(db.String(20), nullable=False, default="미정산")  # 미정산 / 정산완료
     settled_at = db.Column(db.DateTime, nullable=True)
+    # 정산 화면에서만 숨김(목록 복구 가능). 90일 초과 시 일괄 삭제 대상에 포함.
+    settlement_hidden_at = db.Column(db.DateTime, nullable=True, index=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 

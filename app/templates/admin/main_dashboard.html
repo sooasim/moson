@@ -100,11 +100,29 @@
     </div>
   </div>
 
-  <div>
+  <div id="consult-list">
     <div class="card">
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;">
         <h2 style="margin:0;">가입/견적 신청 리스트</h2>
-        <div class="muted" style="font-size:12px;">총 {{ consults|length }}건</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+          <a href="{{ url_for('routes.admin_consults_export_xlsx', scope='page', page=consult_page) }}" class="pill" style="text-decoration:none;font-size:12px;">현재 페이지 엑셀</a>
+          <a href="{{ url_for('routes.admin_consults_export_xlsx', scope='all') }}" class="pill" style="text-decoration:none;font-size:12px;">전체 엑셀(90일)</a>
+        </div>
+      </div>
+      <p class="muted" style="margin:8px 0 10px 0;font-size:12px;">
+        전체 <b>{{ consult_total }}</b>건 · 페이지당 {{ consult_per_page }}건 · 약 90일(3개월) 보관, <b>매월 1일</b> 보관 초과분 자동 삭제
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;font-size:13px;">
+        {% if consult_page > 1 %}
+        <a href="{{ url_for('routes.admin_index', page=consult_page - 1) }}#consult-list" class="pill" style="text-decoration:none;font-size:12px;">이전</a>
+        {% endif %}
+        {% for p in range(consult_page_min, consult_page_max + 1) %}
+        <a href="{{ url_for('routes.admin_index', page=p) }}#consult-list" class="pill" style="text-decoration:none;font-size:12px;{% if p == consult_page %}border-color:#34d399;color:#6ee7b7;{% endif %}">{{ p }}</a>
+        {% endfor %}
+        {% if consult_page < consult_pages %}
+        <a href="{{ url_for('routes.admin_index', page=consult_page + 1) }}#consult-list" class="pill" style="text-decoration:none;font-size:12px;">다음</a>
+        {% endif %}
+        <span class="muted" style="font-size:11px;margin-left:8px;">{{ consult_page }} / {{ consult_pages }} 페이지</span>
       </div>
       <div class="scroll-panel">
         <table>
@@ -133,7 +151,7 @@
                   {% if r.reseller %}
                     <b>{{ r.reseller.company_name }}</b><br><span class="muted">{{ r.reseller.subdomain }}.{{ base_domain }}</span>
                   {% else %}
-                    <b>메인</b>
+                    <b style="color:#34d399;font-weight:900;">본사</b><br><span style="color:#6ee7b7;font-size:11px;font-weight:700;">moson.life · 메인 접수</span>
                   {% endif %}
                 </td>
                 <td style="font-weight:600;">{{ r.customer_name or "-" }}</td>

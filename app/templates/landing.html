@@ -177,6 +177,10 @@
         @media (max-width: 640px) {
             .fixed-consult { bottom: 20px; right: 16px; gap: 10px; }
             .icon-btn { width: 52px; height: 52px; font-size: 22px; }
+            /* 리셀러 시뮬레이션 숫자 크기 축소 */
+            #refCount { font-size: 16px !important; }
+            #rewardOut { font-size: 3rem !important; line-height: 1.05 !important; word-break: keep-all; }
+            .reseller-sim-panel { padding: 1rem !important; border-radius: 28px !important; }
         }
     </style>
 </head>
@@ -611,7 +615,7 @@
                         <p class="text-[11px] text-emerald-600 font-black mb-4 animate-bounce">👈 바의 동그란 점을 밀어서 수익을 확인하세요!</p>
                         <input type="range" id="refSlider" min="0" max="30" value="10" class="w-full h-4 bg-slate-100 rounded-full appearance-none cursor-pointer accent-[#66c691]" oninput="updateReward()">
                     </div>
-                    <div class="bg-emerald-50 p-12 rounded-[50px] text-center border-4 border-emerald-100 shadow-inner">
+                    <div class="reseller-sim-panel bg-emerald-50 p-12 rounded-[50px] text-center border-4 border-emerald-100 shadow-inner">
                         <p class="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest">Expected Monthly Profit</p>
                         <div id="rewardOut" class="text-6xl font-black text-emerald-600 tracking-tighter">1,000,000원</div>
                     </div>

@@ -48,6 +48,21 @@
         </div>
       </div>
 
+      <div style="margin-top:8px;padding:12px;border-radius:12px;background:rgba(15,23,42,.5);border:1px solid rgba(255,255,255,.1);">
+        <label style="display:block;margin-bottom:8px;">서브페이지 유형</label>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="radio" name="page_type" value="reseller" checked>
+            <span>리셀러 포함</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="radio" name="page_type" value="influencer">
+            <span>인플루언서</span>
+          </label>
+        </div>
+        <p class="muted" style="margin:8px 0 0 0;font-size:11px;">리셀러 포함: 기존과 동일(부업 모집 영역·리셀러 지원금 표시). 인플루언서: 부업 영역 없음, 리셀러 지원금/리워드 문구 숨김.</p>
+      </div>
+
       {% if prefill %}
       <input type="hidden" name="application_id" value="{{ prefill.id }}">
       {% endif %}

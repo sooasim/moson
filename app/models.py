@@ -19,6 +19,8 @@ class Reseller(db.Model):
     deleted_at = db.Column(db.DateTime, nullable=True)
     # 어느 대리점이 모집해 등록했는지 (NULL이면 본사 직접 모집/등록)
     recruited_by_reseller_id = db.Column(db.Integer, db.ForeignKey("resellers.id"), nullable=True, index=True)
+    # 페이지 타입: 'reseller' = 리셀러 포함(부업 영역 있음), 'influencer' = 인플루언서 전용(부업 영역 없음)
+    page_type = db.Column(db.String(20), nullable=False, default="reseller")
 
 
 class ConsultRequest(db.Model):

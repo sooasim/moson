@@ -81,7 +81,8 @@
         </div>
         {% endif %}
       </div>
-      <div class="pill">
+      <div class="pill" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <a href="{{ request.url_root.rstrip('/') }}/" class="brand" style="font-size:17px;text-decoration:none;color:var(--fg);white-space:nowrap;" title="{% if tenant and tenant.subdomain %}서브 메인으로{% else %}메인 사이트로{% endif %}">MOSON<span class="muted">.life</span></a>
         {% if session.get("user_kind") %}
           <span class="muted" style="font-size:12px;">{{ session.get("user_kind") }} 로그인</span>
           <a href="/admin/logout" class="muted" style="text-decoration:none;font-weight:900;">로그아웃</a>

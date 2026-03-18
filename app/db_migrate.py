@@ -89,3 +89,12 @@ def run_schema_patches(app, db) -> None:
             )
         except Exception:
             app.logger.exception("settlement_hidden_at patch")
+
+    if not has_col("resellers", "page_type"):
+        try:
+            run(
+                "ALTER TABLE resellers ADD COLUMN page_type VARCHAR(20) NOT NULL DEFAULT 'reseller'",
+                "ALTER TABLE resellers ADD COLUMN IF NOT EXISTS page_type VARCHAR(20) NOT NULL DEFAULT 'reseller'",
+            )
+        except Exception:
+            app.logger.exception("page_type patch")

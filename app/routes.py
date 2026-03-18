@@ -261,6 +261,7 @@ def _tenant_context():
     tenant = get_tenant()
     moson_email = current_app.config.get("MOSON_EMAIL")
     if tenant:
+        page_type = getattr(tenant, "page_type", "reseller") or "reseller"
         return {
             "tenant_company_name": tenant.company_name,
             "tenant_phone": tenant.phone,
@@ -268,6 +269,7 @@ def _tenant_context():
             "moson_email": moson_email,
             "tenant_subdomain": tenant.subdomain,
             "is_dealer_site": True,
+            "is_influencer_page": page_type == "influencer",
         }
     return {
         "tenant_company_name": "MOSON 본사",
@@ -276,6 +278,7 @@ def _tenant_context():
         "moson_email": moson_email,
         "tenant_subdomain": None,
         "is_dealer_site": False,
+        "is_influencer_page": False,
     }
 
 def _partners_json():
@@ -414,6 +417,14 @@ def _policy_summary():
 @bp.get("/")
 def landing():
     ctx = _tenant_context()
+    tenant = get_tenant()
+    if tenant:
+        ctx["show_admin_nav_link"] = (
+            session.get("user_kind") == "reseller"
+            and session.get("reseller_id") == tenant.id
+        )
+    else:
+        ctx["show_admin_nav_link"] = session.get("user_kind") == "main"
     policy_summary = _policy_summary()
     resp = make_response(render_template(
         "landing.html",
@@ -421,7 +432,6 @@ def landing():
         policy_summary=policy_summary,
         **ctx,
     ))
-    tenant = get_tenant()
     # 서브사이트 최초 방문 시 쿠키를 저장해 이후 본사 방문/신청에도 동일 대리점으로 귀속
     if tenant and tenant.subdomain:
         resp.set_cookie(
@@ -1807,8 +1817,13 @@ def admin_script_templates():
             return gate
 
     data = _load_script_templates()
+    # 본사(메인 도메인)만 스크립트 본문·FAQ 편집/추가 저장 가능. 대리점은 동일 템플릿 열람만.
+    can_edit_script_faq = tenant is None
 
     if request.method == "POST":
+        if not can_edit_script_faq:
+            flash("스크립트·FAQ 수정은 본사 어드민에서만 가능합니다.", "error")
+            return redirect(url_for("routes.admin_script_templates"))
         script_body = (request.form.get("script_body") or "").strip()
         faqs = []
         idx = 0
@@ -1837,6 +1852,7 @@ def admin_script_templates():
         title="상담 스크립트 / FAQ 템플릿",
         script_body=data.get("script_body", ""),
         faqs=data.get("faqs", []),
+        can_edit_script_faq=can_edit_script_faq,
     )
 
 
@@ -2116,6 +2132,10 @@ def admin_reseller_new():
         app_row_pref = ResellerApplication.query.get(int(app_id_raw)) if app_id_raw and app_id_raw.isdigit() else None
         recruited_by = app_row_pref.recruiting_reseller_id if app_row_pref and app_row_pref.recruiting_reseller_id else None
 
+        page_type = (request.form.get("page_type") or "").strip().lower()
+        if page_type not in ("reseller", "influencer"):
+            page_type = "reseller"
+
         r = Reseller(
             subdomain=subdomain,
             company_name=company_name,
@@ -2127,6 +2147,7 @@ def admin_reseller_new():
             bank_account=bank_account,
             admin_password_hash=generate_password_hash(initial_password),
             recruited_by_reseller_id=recruited_by,
+            page_type=page_type,
         )
         db.session.add(r)
         db.session.commit()

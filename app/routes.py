@@ -288,6 +288,17 @@ def landing():
         policy_summary=policy_summary,
         **ctx,
     ))
+    tenant = get_tenant()
+    # 서브사이트 최초 방문 시 쿠키를 저장해 이후 본사 방문/신청에도 동일 대리점으로 귀속
+    if tenant and tenant.subdomain:
+        resp.set_cookie(
+            "moson_affiliate",
+            tenant.subdomain,
+            max_age=60 * 60 * 24 * 365,
+            httponly=True,
+            samesite="Lax",
+            secure=request.is_secure,
+        )
     # 정책표 수정 후 메인에서도 최신 정책(최고가 등)이 보이도록 캐시 방지
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     return resp
@@ -551,7 +562,18 @@ def partner_apply():
             pass
 
         flash("부업 파트너 신청이 접수되었습니다. 담당자가 내용을 확인 후 연락드리겠습니다.")
-        return redirect(url_for("routes.landing", partner="1"))
+        resp = make_response(redirect(url_for("routes.landing", partner="1")))
+        # 대리점 사이트에서 신청하면 그 대리점을 계속 귀속시키는 쿠키를 유지
+        if get_tenant() and get_tenant().subdomain:
+            resp.set_cookie(
+                "moson_affiliate",
+                get_tenant().subdomain,
+                max_age=60 * 60 * 24 * 365,
+                httponly=True,
+                samesite="Lax",
+                secure=request.is_secure,
+            )
+        return resp
 
     return render_template("partner_apply.html", title="부업 파트너 신청", form_data=None)
 

@@ -24,6 +24,12 @@ def get_subdomain_from_request() -> str | None:
         return None
 
     if host == base:
+        # 본사/공용 도메인에서도 첫 방문 대리점 귀속 쿠키가 있으면 이를 우선 사용
+        if request.path.startswith("/admin"):
+            return None
+        cookie_sub = (request.cookies.get("moson_affiliate") or "").strip().lower()
+        if cookie_sub and cookie_sub != "www":
+            return cookie_sub
         return None
     if host.endswith("." + base):
         prefix = host[: -(len(base) + 1)]

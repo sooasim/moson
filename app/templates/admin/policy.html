@@ -8,24 +8,48 @@
   /* 정책표 페이지: PC 화면 넓이에 가득 차게 반응형 */
   .policy-page { width: 100%; }
   .policy-page .card { width: 100%; max-width: 100%; }
-  .policy-page .card-body { width: 100%; }
+  .policy-page .card-body { width: 100%; padding: 10px 12px 12px; }
+  .policy-page .card-header { padding: 10px 12px 8px; }
   .policy-page .scroll-panel { width: 100%; max-width: 100%; max-height: min(70vh, 600px); overflow: auto; }
   .policy-page .table { width: 100%; table-layout: auto; border-collapse: collapse; }
+  .policy-page .table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(8px);
+  }
   .policy-page .table th, .policy-page .table td {
-    padding: 8px 10px;
+    padding: 7px 8px;
     font-size: 13px;
     white-space: normal;       /* PC에서 가로폭 줄이기 위해 줄바꿈 허용 */
     word-break: keep-all;      /* 한글 단어 단위로 줄바꿈 */
+    line-height: 1.35;
   }
   @media (max-width: 1200px) {
     .policy-page .scroll-panel { max-height: min(72vh, 700px); }
   }
   @media (max-width: 1024px) {
-    .policy-page .table th, .policy-page .table td { padding: 6px 8px; font-size: 12px; }
+    .policy-page .table th, .policy-page .table td { padding: 5px 7px; font-size: 12px; }
+    .policy-page .card-body { padding: 8px 10px 10px; }
   }
   @media (max-width: 768px) {
-    .policy-page .scroll-panel { max-height: 60vh; }
-    .policy-page .table th, .policy-page .table td { padding: 4px 6px; font-size: 11px; }
+    .policy-page .scroll-panel { max-height: 62vh; }
+    .policy-page .table th, .policy-page .table td { padding: 4px 5px; font-size: 11px; }
+    .policy-page .card { border-radius: 14px; }
+    .policy-page .card-body { padding: 8px 8px 10px; }
+    .policy-page .card-header { padding: 8px 10px 6px; }
+    .policy-page .card-header h2,
+    .policy-page .card-header h3 { font-size: 16px; line-height: 1.3; }
+    .policy-page .scroll-panel {
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+    }
+  }
+  @media (max-width: 640px) {
+    .policy-page .table th, .policy-page .table td { padding: 4px 4px; font-size: 10px; }
+    .policy-page .table { min-width: 840px; }
+    .policy-page .card { margin-top: 12px !important; }
   }
   /* 항목별 직관 색상: 경품가이드(붉은색), 상품권(초록), 현금VAT포함(주황), 상품권+현금(파랑), 현금(노랑/골드), 리셀러비용(핑크) */
   .policy-page .policy-col-guide { color: #c0392b !important; font-weight: 600; }
@@ -41,7 +65,7 @@
   .policy-page .policy-col-cash-vat input { color: #e67e22 !important; font-weight: 600; }
   /* 정책표 전용 아이콘 (CDN 없이 항상 표시) */
   .policy-page .policy-icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; margin-right: 6px; fill: currentColor; }
-  .policy-page .saved-banner { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.5); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; color: #047857; }
+  .policy-page .saved-banner { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.5); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; color: #047857; }
 </style>
 <div class="policy-page">
 {% if request.args.get('saved') %}

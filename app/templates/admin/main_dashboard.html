@@ -18,6 +18,19 @@
     .status-pill[data-status="정산완료"] { background:#bbf7d0; color:#166534; }
     .status-pill[data-status="반려"] { background:#fee2e2; color:#b91c1c; }
   </style>
+  {% if not config.get('DB_HEALTH_OK', True) %}
+    <div class="card" style="margin-top:16px;margin-bottom:16px;border-color:rgba(239,68,68,.5);background:rgba(127,29,29,.35);">
+      <h2 style="margin:0 0 6px 0;color:#fecaca;">DB 경고</h2>
+      <p style="margin:0;color:#fee2e2;font-size:13px;line-height:1.6;">
+        데이터베이스 연결에 문제가 있어 일부 기능이 제한될 수 있습니다. 서버 로그와 DB 상태를 확인해 주세요.
+      </p>
+      {% if config.get('DB_HEALTH_ERROR') %}
+        <div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(15,23,42,.55);color:#fca5a5;font-size:12px;white-space:pre-wrap;">
+          {{ config.get('DB_HEALTH_ERROR') }}
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
   <div class="card" style="margin-top:16px;margin-bottom:16px;">
     <h2 style="margin:0 0 4px 0;">방문자 요약 (최근 24시간)</h2>
     <p class="muted" style="margin:0 0 12px 0;font-size:11px;">

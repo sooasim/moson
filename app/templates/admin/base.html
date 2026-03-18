@@ -12,7 +12,7 @@
     body{ margin:0; background:linear-gradient(180deg,#020617,#0b1220 50%,#020617); color:var(--fg); }
     *, *::before, *::after{ box-sizing:border-box; }
     a{ color:inherit; }
-    .wrap{ max-width:1100px; margin:0 auto; padding:24px 16px 80px; }
+    .wrap{ max-width:1600px; margin:0 auto; padding:24px 16px 80px; }
     .wrap.wrap-full{ max-width:none; width:100%; padding-left:24px; padding-right:24px; box-sizing:border-box; }
     .top{ display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
     .brand{ font-weight:900; letter-spacing:-.02em; font-size:20px; }
@@ -39,6 +39,14 @@
 </head>
 <body>
   <div class="wrap {% if request.path == '/admin/policy' %}wrap-full{% endif %}">
+    {% if not config.get('DB_HEALTH_OK', True) %}
+      <div class="flash danger" style="margin-top:0;margin-bottom:16px;">
+        DB 연결에 문제가 감지되었습니다. 사이트 일부 기능이 일시적으로 제한될 수 있습니다.
+        {% if config.get('DB_HEALTH_ERROR') %}
+          <div style="margin-top:6px;font-size:12px;font-weight:700;opacity:.95;white-space:pre-wrap;">{{ config.get('DB_HEALTH_ERROR') }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
     <div class="top">
       <div>
         <div class="brand">MOSON.life <span class="muted">Admin</span></div>

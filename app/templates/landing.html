@@ -197,7 +197,10 @@
         <div class="container mx-auto px-6 flex justify-between items-center">
             <div class="flex items-center gap-2">
                 {% if is_dealer_site %}
-                    <div class="text-2xl font-black tracking-tighter" style="color: var(--moson-navy);">[{{ tenant_company_name }}] MOSON</div>
+                    <div class="text-2xl font-black tracking-tighter">
+                        <span style="color: var(--moson-mint);">{{ tenant_company_name }}</span>
+                        <span style="color: var(--moson-navy);"> MOSON</span>
+                    </div>
                 {% else %}
                     <div class="text-2xl font-black tracking-tighter" style="color: var(--moson-navy);">MOSON<span style="color: var(--moson-mint);">.life</span></div>
                 {% endif %}
@@ -1150,18 +1153,20 @@ for (let s = 0; s < totalSlides; s++) {
       const note = document.createElement('div');
       note.style.position='fixed';
       note.style.left='50%';
-      note.style.bottom='28px';
-      note.style.transform='translateX(-50%)';
+      note.style.top='50%';
+      note.style.transform='translate(-50%,-50%)';
       note.style.zIndex='9999';
-      note.style.padding='14px 18px';
-      note.style.borderRadius='999px';
-      note.style.background='rgba(16,185,129,0.95)';
+      note.style.padding='18px 22px';
+      note.style.borderRadius='18px';
+      note.style.background='rgba(15,23,42,0.96)';
       note.style.color='white';
       note.style.fontWeight='800';
-      note.style.boxShadow='0 20px 60px rgba(0,0,0,0.35)';
+      note.style.fontSize='14px';
+      note.style.boxShadow='0 24px 70px rgba(15,23,42,0.7)';
+      note.style.textAlign='center';
       note.innerText=message;
       document.body.appendChild(note);
-      setTimeout(()=>{ note.remove(); }, 4500);
+      setTimeout(()=>{ note.remove(); }, 4000);
     };
 
     if(params.get('sent') === '1'){

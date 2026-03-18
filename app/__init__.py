@@ -54,23 +54,31 @@ def create_app():
     app.config["CLOUDFLARE_ZONE_ID"] = os.getenv("CLOUDFLARE_ZONE_ID")
     app.config["CLOUDFLARE_DNS_TARGET"] = os.getenv("CLOUDFLARE_DNS_TARGET")  # IP or CNAME target
     app.config["CLOUDFLARE_PROXIED"] = os.getenv("CLOUDFLARE_PROXIED", "1") == "1"
+    app.config["DB_HEALTH_OK"] = True
+    app.config["DB_HEALTH_ERROR"] = None
 
     db.init_app(app)
     app.register_blueprint(routes_bp)
 
     with app.app_context():
-        db.create_all()
-        # 정책표 자동 불러오기: 로컬(SQLite)에서만 실행. 배포(Postgres)에서는 절대 자동 불러오기 하지 않음.
-        # → 커밋/푸시 후 재배포해도 DB에 저장된 수정 내용이 유지됨. 초기 데이터는 어드민 정책표 페이지에서 엑셀 업로드로만 반영.
-        if not database_url:
-            from .models import PolicyRow
-            if PolicyRow.query.count() == 0:
-                xlsx_path = os.path.join(app.root_path, "data", "moson_policy.xlsx")
-                if os.path.isfile(xlsx_path):
-                    try:
-                        from .policy_import import run_policy_import
-                        run_policy_import(app, xlsx_path=xlsx_path)
-                    except Exception:
-                        pass
+        try:
+            db.create_all()
+            # 정책표 자동 불러오기: 로컬(SQLite)에서만 실행. 배포(Postgres)에서는 절대 자동 불러오기 하지 않음.
+            # → 커밋/푸시 후 재배포해도 DB에 저장된 수정 내용이 유지됨. 초기 데이터는 어드민 정책표 페이지에서 엑셀 업로드로만 반영.
+            if not database_url:
+                from .models import PolicyRow
+                if PolicyRow.query.count() == 0:
+                    xlsx_path = os.path.join(app.root_path, "data", "moson_policy.xlsx")
+                    if os.path.isfile(xlsx_path):
+                        try:
+                            from .policy_import import run_policy_import
+                            run_policy_import(app, xlsx_path=xlsx_path)
+                        except Exception:
+                            pass
+        except Exception as e:
+            # DB가 일시적으로 죽어도 앱은 뜨게 하고, 어드민에서 경고를 표시한다.
+            app.config["DB_HEALTH_OK"] = False
+            app.config["DB_HEALTH_ERROR"] = str(e)
+            app.logger.exception("Database initialization failed: %s", e)
 
     return app

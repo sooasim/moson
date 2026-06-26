@@ -1,0 +1,5 @@
+# Railway(Railpack)의 mise가 Python을 설치할 때 GitHub attestation(서명) 검증을
+# 강제하면서 빌드가 깨지는 문제를 해결하기 위한 설정.
+# python-build-standalone 3.12.2 배포본에는 해당 서명이 없어 검증에 실패함.
+[settings]
+python.github_attestations = false
